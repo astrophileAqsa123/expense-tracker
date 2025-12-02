@@ -50,7 +50,7 @@ This project uses models, services, and Firebase integration to handle users, bu
 
 1.  **Clone the repository**
     ```bash
-    git clone [https://github.com/](https://github.com/)<your-repo>/expense_tracker.git
+    git clone https://github.com/astrophileAqsa123/expense-tracker.git
     cd expense_tracker
     ```
 
