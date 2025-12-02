@@ -42,21 +42,35 @@ This project uses models, services, and Firebase integration to handle users, bu
 
 ---
 
-## Setup
+## 🛠️ Setup Instructions
 
-1. **Clone the repository**
+---
+
+### 1. Project Setup
+
+1.  **Clone the repository**
+    ```bash
+    git clone [https://github.com/](https://github.com/)<your-repo>/expense_tracker.git
+    cd expense_tracker
+    ```
+
+2.  **Install dependencies**
+    ```bash
+    flutter pub get
+    ```
+
+---
+
+### 2. Firebase Configuration
+
+This is a critical step for linking the app to a functional database.
+Ensure you have **Editor** access to the Firebase project that this repository is linked to.
+
+---
+
+### 3. Run the App
+
+Once dependencies are installed and Firebase is configured (Option A or B):
 
 ```bash
-git clone https://github.com/<your-repo>/expense_tracker.git
-cd expense_tracker
-
-**Install dependencies**
-```bash
-flutter pub get
-
-**Firebase configuration**
-Since firebase_options.dart is included, the project is already linked to the Firebase project.
-Make sure you have access to the Firebase project (added as Editor in Firebase console).
-
-**Run the app**
 flutter run
