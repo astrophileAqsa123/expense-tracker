@@ -3,6 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import '../add_transaction/add_income_screen.dart';
+// 💡 Required imports for navigation
+import '../add_transaction/add_expense_screen.dart'; 
+import '../add_transaction/receipt_scanner.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -13,7 +17,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance; 
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String selectedPeriod = 'Month';
   bool isExpanded = false;
 
@@ -25,7 +29,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (userId == null) {
       return const Scaffold(
         body: Center(
-          child: Text('User not logged in. Please log in to view the dashboard.'),
+          child: Text(
+            'User not logged in. Please log in to view the dashboard.',
+          ),
         ),
       );
     }
@@ -43,32 +49,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Column(
                     children: [
                       const SizedBox(height: 20),
-                      _buildBalanceCard(userId), 
+                      _buildBalanceCard(userId),
                       const SizedBox(height: 20),
                       _buildQuickStats(userId),
                       const SizedBox(height: 20),
-                      _buildChartsSection(userId), 
+                      _buildChartsSection(userId),
                       const SizedBox(height: 20),
                       _buildCategoriesGrid(),
                       const SizedBox(height: 20),
                       _buildRecentTransactions(userId),
-                      // FINAL OVERFLOW FIX: Set to 160px to guarantee clearance 
-                      // of the fixed BottomAppBar and FAB notch area.
-                      const SizedBox(height: 160), 
+                      // FINAL OVERFLOW FIX: Set to 160px to guarantee clearance
+                      const SizedBox(height: 160),
                     ],
                   ),
                 ),
               ],
             ),
-            
+
             // 2. Expanded Speed Dial Overlay (Hidden when not expanded)
             Positioned(
-              bottom: 80, 
-              right: 20, 
-              left: 20, 
-              child: _buildSpeedDialOverlay(),
+              bottom: 80,
+              right: 20,
+              left: 20,
+              child: AnimatedOpacity(
+                opacity: isExpanded ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 200),
+                child: IgnorePointer(
+                  ignoring: !isExpanded,
+                  child: _buildSpeedDialOverlay(),
+                ),
+              ),
             ),
-            
+
             // 3. Bottom Navigation Bar (Fixed Position)
             Positioned(
               bottom: 0,
@@ -76,11 +88,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               right: 0,
               child: _buildBottomNavigationBar(),
             ),
-            
+
             // 4. Floating Action Button (Fixed Position)
             Positioned(
-              bottom: 30, 
-              left: (MediaQuery.of(context).size.width / 2) - 30, 
+              bottom: 30,
+              left: (MediaQuery.of(context).size.width / 2) - 30,
               child: FloatingActionButton(
                 backgroundColor: const Color(0xFF6C63FF),
                 onPressed: () {
@@ -128,7 +140,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         : null,
                     backgroundColor: Colors.white24,
                     child: user?.photoURL == null
-                        ? const Icon(Icons.person, size: 18, color: Colors.white)
+                        ? const Icon(
+                            Icons.person,
+                            size: 18,
+                            color: Colors.white,
+                          )
                         : null,
                   ),
                   const SizedBox(width: 9),
@@ -138,10 +154,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       const Text(
                         'Welcome back,',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
                       ),
                       Text(
                         user?.displayName ?? 'User',
@@ -158,8 +171,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Stack(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.notifications_outlined, 
-                                     color: Colors.white, size: 28),
+                    icon: const Icon(
+                      Icons.notifications_outlined,
+                      color: Colors.white,
+                      size: 28,
+                    ),
                     onPressed: () {},
                   ),
                   Positioned(
@@ -192,19 +208,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           if (snapshot.error.toString().contains('permission-denied')) {
-             return _buildErrorCard(
+            return _buildErrorCard(
               'Permission Denied',
               'Check your Firebase Firestore Security Rules (users/{userId}).',
-             );
+            );
           }
-          return Center(child: Text('Error loading balance: ${snapshot.error}'));
+          return Center(
+            child: Text('Error loading balance: ${snapshot.error}'),
+          );
         }
-        
+
         if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: Padding(
+          return const Center(
+            child: Padding(
               padding: EdgeInsets.all(20.0),
               child: CircularProgressIndicator(),
-            ));
+            ),
+          );
         }
 
         if (!snapshot.hasData || snapshot.data?.data() == null) {
@@ -213,19 +233,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
             'Balance Data Missing',
             'Ensure a document exists at "users/{$userId}" and contains a "balance" map field.',
           );
-        } 
-        
+        }
+
         final data = snapshot.data?.data() as Map<String, dynamic>?;
         final balance = data?['balance'] as Map<String, dynamic>?;
-        
-        final totalBalance = (balance?['totalBalance'] as num?)?.toDouble() ?? 0.0;
-        final monthlyIncome = (balance?['monthlyIncome'] as num?)?.toDouble() ?? 0.0;
-        final monthlyExpense = (balance?['monthlyExpense'] as num?)?.toDouble() ?? 0.0;
 
-        final savingsRate = monthlyIncome > 0 
+        final totalBalance =
+            (balance?['totalBalance'] as num?)?.toDouble() ?? 0.0;
+        final monthlyIncome =
+            (balance?['monthlyIncome'] as num?)?.toDouble() ?? 0.0;
+        final monthlyExpense =
+            (balance?['monthlyExpense'] as num?)?.toDouble() ?? 0.0;
+
+        final savingsRate = monthlyIncome > 0
             ? ((monthlyIncome - monthlyExpense) / monthlyIncome * 100)
             : 0.0;
-        
+
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 20),
           padding: const EdgeInsets.all(24),
@@ -248,10 +271,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               const Text(
                 'Total Balance',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: Colors.white70, fontSize: 14),
               ),
               const SizedBox(height: 8),
               Text(
@@ -273,11 +293,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Colors.green,
                     ),
                   ),
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: Colors.white24,
-                  ),
+                  Container(width: 1, height: 40, color: Colors.white24),
                   Expanded(
                     child: _buildBalanceItem(
                       'Expenses',
@@ -286,20 +302,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Colors.red,
                     ),
                   ),
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: Colors.white24,
-                  ),
+                  Container(width: 1, height: 40, color: Colors.white24),
                   Expanded(
                     child: Column(
                       children: [
                         const Text(
                           'Savings',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -322,7 +331,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildBalanceItem(String label, double amount, IconData icon, Color color) {
+  Widget _buildBalanceItem(
+    String label,
+    double amount,
+    IconData icon,
+    Color color,
+  ) {
     return Column(
       children: [
         Row(
@@ -332,10 +346,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(width: 4),
             Text(
               label,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
             ),
           ],
         ),
@@ -375,10 +386,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 8),
           Text(
             message,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black87,
-            ),
+            style: const TextStyle(fontSize: 14, color: Colors.black87),
           ),
         ],
       ),
@@ -391,22 +399,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .collection('users')
           .doc(userId)
           .collection('transactions')
-          .where('date', isGreaterThan: DateTime.now().subtract(const Duration(days: 30)))
+          .where(
+            'date',
+            isGreaterThan: DateTime.now().subtract(const Duration(days: 30)),
+          )
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Text('Error loading stats (Permission Denied). Check rules for transactions/{transactionId}.'),
+            child: Text(
+              'Error loading stats (Permission Denied). Check rules for transactions/{transactionId}.',
+            ),
           );
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(height: 100); 
+          return const SizedBox(height: 100);
         }
-        
+
         final transactions = snapshot.data?.docs ?? [];
         final transactionCount = transactions.length;
-        
+
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
@@ -444,7 +457,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -473,16 +491,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 4),
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF718096),
-            ),
+            style: const TextStyle(fontSize: 11, color: Color(0xFF718096)),
             textAlign: TextAlign.center,
           ),
         ],
       ),
     );
-  } 
+  }
 
   Widget _buildChartsSection(String userId) {
     return Container(
@@ -531,10 +546,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          SizedBox(
-            height: 200,
-            child: _buildPieChart(userId), 
-          ),
+          SizedBox(height: 200, child: _buildPieChart(userId)),
         ],
       ),
     );
@@ -550,21 +562,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-           return const Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return const Center(child: Text('Error loading chart data (Permission Denied).'));
+          return const Center(
+            child: Text('Error loading chart data (Permission Denied).'),
+          );
         }
         if (snapshot.data!.docs.isEmpty) {
           return const Center(child: Text('No expense data available'));
-        } 
-        
+        }
+
         Map<String, double> categoryTotals = {};
         for (var doc in snapshot.data!.docs) {
           final data = doc.data() as Map<String, dynamic>;
           final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
           final category = data['category'] ?? 'Other';
-          
+
           categoryTotals[category] = (categoryTotals[category] ?? 0) + amount;
         }
 
@@ -577,14 +591,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const Color(0xFF9966FF),
           const Color(0xFFFF9F40),
         ];
-        
-        double total = categoryTotals.values.fold(0, (sum, amount) => sum + amount);
+
+        double total = categoryTotals.values.fold(
+          0,
+          (sum, amount) => sum + amount,
+        );
         int index = 0;
         categoryTotals.forEach((category, amount) {
           sections.add(
             PieChartSectionData(
               value: amount,
-              title: total > 0 ? '${(amount / total * 100).toStringAsFixed(0)}%' : '0%',
+              title: total > 0
+                  ? '${(amount / total * 100).toStringAsFixed(0)}%'
+                  : '0%',
               color: colors[index % colors.length],
               radius: 60,
               titleStyle: const TextStyle(
@@ -596,7 +615,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
           index++;
         });
-        
+
         return PieChart(
           PieChartData(
             sections: sections,
@@ -610,15 +629,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildCategoriesGrid() {
     final categories = [
-      {'name': 'Food', 'icon': Icons.restaurant, 'color': const Color(0xFFFF6384)},
-      {'name': 'Transport', 'icon': Icons.directions_car, 'color': const Color(0xFF36A2EB)},
-      {'name': 'Shopping', 'icon': Icons.shopping_bag, 'color': const Color(0xFFFFCE56)},
-      {'name': 'Bills', 'icon': Icons.receipt, 'color': const Color(0xFF4BC0C0)},
-      {'name': 'Entertain', 'icon': Icons.movie, 'color': const Color(0xFF9966FF)},
-      {'name': 'Health', 'icon': Icons.local_hospital, 'color': const Color(0xFFFF9F40)},
-      {'name': 'Education', 'icon': Icons.school, 'color': const Color(0xFF4CAF50)},
-      {'name': 'Other', 'icon': Icons.more_horiz, 'color': const Color(0xFF9E9E9E)},
-    ]; 
+      {
+        'name': 'Food',
+        'icon': Icons.restaurant,
+        'color': const Color(0xFFFF6384),
+      },
+      {
+        'name': 'Transport',
+        'icon': Icons.directions_car,
+        'color': const Color(0xFF36A2EB),
+      },
+      {
+        'name': 'Shopping',
+        'icon': Icons.shopping_bag,
+        'color': const Color(0xFFFFCE56),
+      },
+      {
+        'name': 'Bills',
+        'icon': Icons.receipt,
+        'color': const Color(0xFF4BC0C0),
+      },
+      {
+        'name': 'Entertain',
+        'icon': Icons.movie,
+        'color': const Color(0xFF9966FF),
+      },
+      {
+        'name': 'Health',
+        'icon': Icons.local_hospital,
+        'color': const Color(0xFFFF9F40),
+      },
+      {
+        'name': 'Education',
+        'icon': Icons.school,
+        'color': const Color(0xFF4CAF50),
+      },
+      {
+        'name': 'Other',
+        'icon': Icons.more_horiz,
+        'color': const Color(0xFF9E9E9E),
+      },
+    ];
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 18),
       child: Column(
@@ -736,7 +787,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (snapshot.hasError) {
                 return Center(child: Text('Error: ${snapshot.error}'));
               }
-              
+
               if (snapshot.data!.docs.isEmpty) {
                 return Container(
                   padding: const EdgeInsets.all(40),
@@ -751,7 +802,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                 );
-              } 
+              }
               return ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -759,12 +810,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 itemBuilder: (context, index) {
                   final doc = snapshot.data!.docs[index];
                   final data = doc.data() as Map<String, dynamic>;
-                  
+
                   return _buildTransactionItem(
                     data['category'] ?? 'Other',
                     data['description'] ?? 'Transaction',
                     (data['date'] as Timestamp).toDate(),
-                    (data['amount'] as num?)?.toDouble() ?? 0.0, 
+                    (data['amount'] as num?)?.toDouble() ?? 0.0,
                     data['type'] == 'income',
                   );
                 },
@@ -784,7 +835,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     bool isIncome,
   ) {
     IconData icon;
-    Color color; 
+    Color color;
     switch (category.toLowerCase()) {
       case 'food':
         icon = Icons.restaurant;
@@ -855,7 +906,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: isIncome ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
+              color: isIncome
+                  ? const Color(0xFF4CAF50)
+                  : const Color(0xFFF44336),
             ),
           ),
         ],
@@ -870,19 +923,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        _buildSpeedDialOption(Icons.add, 'Add Expense', const Color(0xFFF44336)),
+        // 🚀 ADD EXPENSE NAVIGATION
+        _buildSpeedDialOption(
+          Icons.add,
+          'Add Expense',
+          const Color(0xFFF44336),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const AddExpenseScreen()),
+            );
+          },
+        ),
         const SizedBox(height: 12),
-        _buildSpeedDialOption(Icons.arrow_upward, 'Add Income', const Color(0xFF4CAF50)),
+        // ⬆️ ADD INCOME NAVIGATION (Was already present)
+        _buildSpeedDialOption(
+          Icons.arrow_upward,
+          'Add Income',
+          const Color(0xFF4CAF50),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const AddIncomeScreen()),
+            );
+          },
+        ),
         const SizedBox(height: 12),
-        _buildSpeedDialOption(Icons.camera_alt, 'Scan Receipt', const Color(0xFF2196F3)),
+        // 📸 SCAN RECEIPT NAVIGATION
+        _buildSpeedDialOption(
+          Icons.camera_alt,
+          'Scan Receipt',
+          const Color(0xFF2196F3),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const ReceiptScannerScreen()),
+            );
+          },
+        ),
         const SizedBox(height: 12),
       ],
     );
-  } 
+  }
 
-  Widget _buildSpeedDialOption(IconData icon, String label, Color color) {
+  Widget _buildSpeedDialOption(
+    IconData icon,
+    String label,
+    Color color, {
+    VoidCallback? onTap,
+  }) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.end, 
+      mainAxisAlignment: MainAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
@@ -900,19 +993,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           child: Text(
             label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
         ),
         const SizedBox(width: 12),
         FloatingActionButton(
-          heroTag: label, 
+          heroTag: label,
           mini: true,
           backgroundColor: color,
           onPressed: () {
-            // Handle action
+            // Close the speed dial first
+            if (isExpanded) {
+              setState(() {
+                isExpanded = false;
+              });
+            }
+            // Execute the provided navigation function
+            onTap?.call();
           },
           child: Icon(icon, size: 20),
         ),
@@ -924,7 +1021,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return BottomAppBar(
       shape: const CircularNotchedRectangle(),
       notchMargin: 8,
-      child: const Padding( 
+      child: const Padding(
         padding: EdgeInsets.only(top: 4.0),
         child: SizedBox(
           height: 60,
@@ -932,10 +1029,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _NavItem(icon: Icons.home, label: 'Home', isActive: true),
-              _NavItem(icon: Icons.bar_chart, label: 'Analytics', isActive: false),
-              SizedBox(width: 40), 
-              _NavItem(icon: Icons.receipt_long, label: 'Transactions', isActive: false),
-              _NavItem(icon: Icons.settings, label: 'Settings', isActive: false),
+              _NavItem(
+                icon: Icons.bar_chart,
+                label: 'Analytics',
+                isActive: false,
+              ),
+              SizedBox(width: 40),
+              _NavItem(
+                icon: Icons.receipt_long,
+                label: 'Transactions',
+                isActive: false,
+              ),
+              _NavItem(
+                icon: Icons.settings,
+                label: 'Settings',
+                isActive: false,
+              ),
             ],
           ),
         ),
@@ -957,29 +1066,23 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        // Handle navigation
-      },
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          icon,
+          color: isActive ? const Color(0xFF6C63FF) : const Color(0xFF718096),
+          size: 24,
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
             color: isActive ? const Color(0xFF6C63FF) : const Color(0xFF718096),
-            size: 24,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
           ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: isActive ? const Color(0xFF6C63FF) : const Color(0xFF718096),
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
