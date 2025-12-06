@@ -3,53 +3,105 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
+
 class _DashboardScreenState extends State<DashboardScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance; 
   String selectedPeriod = 'Month';
   bool isExpanded = false;
+
   @override
   Widget build(BuildContext context) {
     final user = _auth.currentUser;
+    final userId = user?.uid;
+
+    if (userId == null) {
+      return const Scaffold(
+        body: Center(
+          child: Text('User not logged in. Please log in to view the dashboard.'),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            _buildAppBar(user),
-            SliverToBoxAdapter(
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
-                  _buildBalanceCard(user?.uid ?? ''),
-                  const SizedBox(height: 20),
-                  _buildQuickStats(user?.uid ?? ''),
-                  const SizedBox(height: 20),
-                  _buildChartsSection(user?.uid ?? ''),
-                  const SizedBox(height: 20),
-                  _buildCategoriesGrid(),
-                  const SizedBox(height: 20),
-                  _buildRecentTransactions(user?.uid ?? ''),
-                  const SizedBox(height: 100),
-                ],
+        child: Stack(
+          children: [
+            // 1. Main Scrollable Content
+            CustomScrollView(
+              slivers: [
+                _buildAppBar(user),
+                SliverToBoxAdapter(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 20),
+                      _buildBalanceCard(userId), 
+                      const SizedBox(height: 20),
+                      _buildQuickStats(userId),
+                      const SizedBox(height: 20),
+                      _buildChartsSection(userId), 
+                      const SizedBox(height: 20),
+                      _buildCategoriesGrid(),
+                      const SizedBox(height: 20),
+                      _buildRecentTransactions(userId),
+                      // FINAL OVERFLOW FIX: Set to 160px to guarantee clearance 
+                      // of the fixed BottomAppBar and FAB notch area.
+                      const SizedBox(height: 160), 
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            
+            // 2. Expanded Speed Dial Overlay (Hidden when not expanded)
+            Positioned(
+              bottom: 80, 
+              right: 20, 
+              left: 20, 
+              child: _buildSpeedDialOverlay(),
+            ),
+            
+            // 3. Bottom Navigation Bar (Fixed Position)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: _buildBottomNavigationBar(),
+            ),
+            
+            // 4. Floating Action Button (Fixed Position)
+            Positioned(
+              bottom: 30, 
+              left: (MediaQuery.of(context).size.width / 2) - 30, 
+              child: FloatingActionButton(
+                backgroundColor: const Color(0xFF6C63FF),
+                onPressed: () {
+                  setState(() {
+                    isExpanded = !isExpanded;
+                  });
+                },
+                child: Icon(isExpanded ? Icons.close : Icons.add, size: 32),
               ),
             ),
           ],
         ),
       ),
-      floatingActionButton: _buildSpeedDial(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
+
+  // --- WIDGET DEFINITIONS ---
+
   Widget _buildAppBar(User? user) {
     return SliverAppBar(
-      expandedHeight: 100,
+      expandedHeight: 110,
       floating: false,
       pinned: true,
       backgroundColor: const Color(0xFF6C63FF),
@@ -76,10 +128,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         : null,
                     backgroundColor: Colors.white24,
                     child: user?.photoURL == null
-                        ? const Icon(Icons.person, size: 30, color: Colors.white)
+                        ? const Icon(Icons.person, size: 18, color: Colors.white)
                         : null,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 9),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -95,7 +147,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         user?.displayName ?? 'User',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -107,7 +159,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.notifications_outlined, 
-                                   color: Colors.white, size: 28),
+                                     color: Colors.white, size: 28),
                     onPressed: () {},
                   ),
                   Positioned(
@@ -133,18 +185,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+
   Widget _buildBalanceCard(String userId) {
     return StreamBuilder<DocumentSnapshot>(
       stream: _firestore.collection('users').doc(userId).snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }     
+        if (snapshot.hasError) {
+          if (snapshot.error.toString().contains('permission-denied')) {
+             return _buildErrorCard(
+              'Permission Denied',
+              'Check your Firebase Firestore Security Rules (users/{userId}).',
+             );
+          }
+          return Center(child: Text('Error loading balance: ${snapshot.error}'));
+        }
+        
+        if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: Padding(
+              padding: EdgeInsets.all(20.0),
+              child: CircularProgressIndicator(),
+            ));
+        }
+
+        if (!snapshot.hasData || snapshot.data?.data() == null) {
+          // Handles the "Balance Data Missing" scenario
+          return _buildErrorCard(
+            'Balance Data Missing',
+            'Ensure a document exists at "users/{$userId}" and contains a "balance" map field.',
+          );
+        } 
+        
         final data = snapshot.data?.data() as Map<String, dynamic>?;
         final balance = data?['balance'] as Map<String, dynamic>?;
-        final totalBalance = balance?['totalBalance'] ?? 0.0;
-        final monthlyIncome = balance?['monthlyIncome'] ?? 0.0;
-        final monthlyExpense = balance?['monthlyExpense'] ?? 0.0;
+        
+        final totalBalance = (balance?['totalBalance'] as num?)?.toDouble() ?? 0.0;
+        final monthlyIncome = (balance?['monthlyIncome'] as num?)?.toDouble() ?? 0.0;
+        final monthlyExpense = (balance?['monthlyExpense'] as num?)?.toDouble() ?? 0.0;
+
         final savingsRate = monthlyIncome > 0 
             ? ((monthlyIncome - monthlyExpense) / monthlyIncome * 100)
             : 0.0;
@@ -244,7 +321,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
     );
   }
-  
+
   Widget _buildBalanceItem(String label, double amount, IconData icon, Color color) {
     return Column(
       children: [
@@ -274,8 +351,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ],
     );
   }
-  
-  // Quick Stats
+
+  Widget _buildErrorCard(String title, String message) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.red, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '🛑 $title',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.black87,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildQuickStats(String userId) {
     return StreamBuilder<QuerySnapshot>(
       stream: _firestore
@@ -285,11 +394,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .where('date', isGreaterThan: DateTime.now().subtract(const Duration(days: 30)))
           .snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const SizedBox();
+        if (snapshot.hasError) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Text('Error loading stats (Permission Denied). Check rules for transactions/{transactionId}.'),
+          );
+        }
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(height: 100); 
         }
         
-        final transactions = snapshot.data!.docs;
+        final transactions = snapshot.data?.docs ?? [];
         final transactionCount = transactions.length;
         
         return Padding(
@@ -328,7 +443,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
     );
   }
-  
+
   Widget _buildStatCard(String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -367,10 +482,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
     );
-  }  
+  } 
+
   Widget _buildChartsSection(String userId) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      margin: const EdgeInsets.symmetric(horizontal: 19),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -417,13 +533,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 20),
           SizedBox(
             height: 200,
-            child: _buildPieChart(userId),
+            child: _buildPieChart(userId), 
           ),
         ],
       ),
     );
   }
-  
+
   Widget _buildPieChart(String userId) {
     return StreamBuilder<QuerySnapshot>(
       stream: _firestore
@@ -433,16 +549,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .where('type', isEqualTo: 'expense')
           .snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+           return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return const Center(child: Text('Error loading chart data (Permission Denied).'));
+        }
+        if (snapshot.data!.docs.isEmpty) {
           return const Center(child: Text('No expense data available'));
-        }   
+        } 
+        
         Map<String, double> categoryTotals = {};
         for (var doc in snapshot.data!.docs) {
           final data = doc.data() as Map<String, dynamic>;
+          final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
           final category = data['category'] ?? 'Other';
-          final amount = (data['amount'] ?? 0).toDouble();
+          
           categoryTotals[category] = (categoryTotals[category] ?? 0) + amount;
         }
+
         List<PieChartSectionData> sections = [];
         List<Color> colors = [
           const Color(0xFFFF6384),
@@ -452,12 +577,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const Color(0xFF9966FF),
           const Color(0xFFFF9F40),
         ];
+        
+        double total = categoryTotals.values.fold(0, (sum, amount) => sum + amount);
         int index = 0;
         categoryTotals.forEach((category, amount) {
           sections.add(
             PieChartSectionData(
               value: amount,
-              title: '${(amount / categoryTotals.values.reduce((a, b) => a + b) * 100).toStringAsFixed(0)}%',
+              title: total > 0 ? '${(amount / total * 100).toStringAsFixed(0)}%' : '0%',
               color: colors[index % colors.length],
               radius: 60,
               titleStyle: const TextStyle(
@@ -469,6 +596,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
           index++;
         });
+        
         return PieChart(
           PieChartData(
             sections: sections,
@@ -479,19 +607,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
     );
   }
+
   Widget _buildCategoriesGrid() {
     final categories = [
       {'name': 'Food', 'icon': Icons.restaurant, 'color': const Color(0xFFFF6384)},
       {'name': 'Transport', 'icon': Icons.directions_car, 'color': const Color(0xFF36A2EB)},
       {'name': 'Shopping', 'icon': Icons.shopping_bag, 'color': const Color(0xFFFFCE56)},
       {'name': 'Bills', 'icon': Icons.receipt, 'color': const Color(0xFF4BC0C0)},
-      {'name': 'Entertainment', 'icon': Icons.movie, 'color': const Color(0xFF9966FF)},
+      {'name': 'Entertain', 'icon': Icons.movie, 'color': const Color(0xFF9966FF)},
       {'name': 'Health', 'icon': Icons.local_hospital, 'color': const Color(0xFFFF9F40)},
       {'name': 'Education', 'icon': Icons.school, 'color': const Color(0xFF4CAF50)},
       {'name': 'Other', 'icon': Icons.more_horiz, 'color': const Color(0xFF9E9E9E)},
     ]; 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      margin: const EdgeInsets.symmetric(horizontal: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -565,6 +694,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+
   Widget _buildRecentTransactions(String userId) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -600,8 +730,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 .limit(5)
                 .snapshots(),
             builder: (context, snapshot) {
-              if (!snapshot.hasData) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
               }
               
               if (snapshot.data!.docs.isEmpty) {
@@ -618,7 +751,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                 );
-              }           
+              } 
               return ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -631,7 +764,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     data['category'] ?? 'Other',
                     data['description'] ?? 'Transaction',
                     (data['date'] as Timestamp).toDate(),
-                    (data['amount'] ?? 0).toDouble(),
+                    (data['amount'] as num?)?.toDouble() ?? 0.0, 
                     data['type'] == 'income',
                   );
                 },
@@ -642,6 +775,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+
   Widget _buildTransactionItem(
     String category,
     String description,
@@ -728,32 +862,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-  Widget _buildSpeedDial() {
+
+  Widget _buildSpeedDialOverlay() {
+    if (!isExpanded) return const SizedBox.shrink();
+
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        if (isExpanded) ...[
-          _buildSpeedDialOption(Icons.add, 'Add Expense', const Color(0xFFF44336)),
-          const SizedBox(height: 12),
-          _buildSpeedDialOption(Icons.arrow_upward, 'Add Income', const Color(0xFF4CAF50)),
-          const SizedBox(height: 12),
-          _buildSpeedDialOption(Icons.camera_alt, 'Scan Receipt', const Color(0xFF2196F3)),
-          const SizedBox(height: 12),
-        ],
-        FloatingActionButton(
-          backgroundColor: const Color(0xFF6C63FF),
-          onPressed: () {
-            setState(() {
-              isExpanded = !isExpanded;
-            });
-          },
-          child: Icon(isExpanded ? Icons.close : Icons.add, size: 32),
-        ),
+        _buildSpeedDialOption(Icons.add, 'Add Expense', const Color(0xFFF44336)),
+        const SizedBox(height: 12),
+        _buildSpeedDialOption(Icons.arrow_upward, 'Add Income', const Color(0xFF4CAF50)),
+        const SizedBox(height: 12),
+        _buildSpeedDialOption(Icons.camera_alt, 'Scan Receipt', const Color(0xFF2196F3)),
+        const SizedBox(height: 12),
       ],
     );
-  }  
+  } 
+
   Widget _buildSpeedDialOption(IconData icon, String label, Color color) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.end, 
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
@@ -779,6 +908,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         const SizedBox(width: 12),
         FloatingActionButton(
+          heroTag: label, 
           mini: true,
           backgroundColor: color,
           onPressed: () {
@@ -789,29 +919,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ],
     );
   }
+
   Widget _buildBottomNavigationBar() {
     return BottomAppBar(
       shape: const CircularNotchedRectangle(),
       notchMargin: 8,
-      child: SizedBox(
-        height: 60,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(Icons.home, 'Home', true),
-            _buildNavItem(Icons.bar_chart, 'Analytics', false),
-            const SizedBox(width: 40), // Space for FAB
-            _buildNavItem(Icons.receipt_long, 'Transactions', false),
-            _buildNavItem(Icons.settings, 'Settings', false),
-          ],
+      child: const Padding( 
+        padding: EdgeInsets.only(top: 4.0),
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _NavItem(icon: Icons.home, label: 'Home', isActive: true),
+              _NavItem(icon: Icons.bar_chart, label: 'Analytics', isActive: false),
+              SizedBox(width: 40), 
+              _NavItem(icon: Icons.receipt_long, label: 'Transactions', isActive: false),
+              _NavItem(icon: Icons.settings, label: 'Settings', isActive: false),
+            ],
+          ),
         ),
       ),
     );
   }
-  
-  Widget _buildNavItem(IconData icon, String label, bool isActive) {
+}
+
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isActive;
+
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.isActive,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return InkWell(
       onTap: () {
+        // Handle navigation
       },
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
