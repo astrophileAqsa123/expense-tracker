@@ -6,23 +6,12 @@ import 'services/auth_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
 import 'screens/splash/splash_screen.dart';
-
-// Temporary Dashboard (replace later)
-class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Dashboard")),
-      body: const Center(child: Text("Logged in successfully!")),
-    );
-  }
-}
+import 'screens/dashboard/dashboard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -41,19 +30,20 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Expense Tracker',
 
+      // Define routes
       routes: {
-        "/login": (context) => LoginScreen(),
-        "/signup": (context) => SignupScreen(),
+        "/login": (context) => const LoginScreen(),
+        "/signup": (context) => const SignupScreen(),
         "/dashboard": (context) => const DashboardScreen(),
       },
 
-      // 🚀 Start with Splash Screen
+      // Start with Splash Screen
       home: SplashWrapper(auth: auth),
     );
   }
 }
 
-// Handles splash + next screen
+// --- SplashWrapper ---
 class SplashWrapper extends StatefulWidget {
   final AuthService auth;
   const SplashWrapper({super.key, required this.auth});
@@ -66,19 +56,22 @@ class _SplashWrapperState extends State<SplashWrapper> {
   @override
   void initState() {
     super.initState();
-    _navigate();
+    _navigateAfterSplash();
   }
 
-  void _navigate() async {
+  void _navigateAfterSplash() async {
+    // Show splash for 3 seconds
     await Future.delayed(const Duration(seconds: 3));
-
-    final user = widget.auth.currentUser;
 
     if (!mounted) return;
 
+    final user = widget.auth.currentUser;
+
     if (user != null) {
+      // User is logged in → Dashboard
       Navigator.pushReplacementNamed(context, "/dashboard");
     } else {
+      // No user → Login
       Navigator.pushReplacementNamed(context, "/login");
     }
   }

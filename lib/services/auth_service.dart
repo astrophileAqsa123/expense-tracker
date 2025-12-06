@@ -6,7 +6,13 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Register a new user + save profile
+  // Current logged-in user
+  User? get currentUser => _auth.currentUser;
+
+  // Stream for auth changes
+  Stream<User?> get userChanges => _auth.authStateChanges();
+
+  // Register new user
   Future<User?> register({
     required String name,
     required String email,
@@ -14,50 +20,50 @@ class AuthService {
     required double income,
     required String currency,
   }) async {
-    final credential = await _auth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-
-    final user = credential.user;
-
-    if (user != null) {
-      // Create UserModel
-      final userModel = UserModel(
-        uid: user.uid,
-        name: name,
+    try {
+      final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
-        income: income,
-        currency: currency,
-        budgetModel: '50/30/20',
-        budget: null,
-        createdAt: DateTime.now(),
+        password: password,
       );
 
-      // Save to Firestore
-      await _db.collection('users').doc(user.uid).set(userModel.toMap());
-    }
+      final user = credential.user;
+      if (user != null) {
+        final userModel = UserModel(
+          uid: user.uid,
+          name: name,
+          email: email,
+          income: income,
+          currency: currency,
+          budgetModel: '50/30/20',
+          budget: null,
+          createdAt: DateTime.now(),
+        );
 
-    return user;
+        await _db.collection('users').doc(user.uid).set(userModel.toMap());
+      }
+      return user;
+    } on FirebaseAuthException catch (e) {
+      print("FirebaseAuthException: ${e.code} - ${e.message}");
+      rethrow;
+    }
   }
 
-  // Login
+  // Login user
   Future<User?> login(String email, String password) async {
-    final credential = await _auth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-    return credential.user;
+    try {
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      return credential.user;
+    } on FirebaseAuthException catch (e) {
+      print("Login FirebaseAuthException: ${e.code} - ${e.message}");
+      rethrow;
+    }
   }
 
   // Logout
   Future<void> logout() async {
     await _auth.signOut();
   }
-
-  // Current logged in user
-  User? get currentUser => _auth.currentUser;
-
-  // Auth state changes
-  Stream<User?> get userChanges => _auth.authStateChanges();
 }
