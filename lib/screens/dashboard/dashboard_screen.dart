@@ -5,8 +5,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../add_transaction/add_income_screen.dart';
 // 💡 Required imports for navigation
-import '../add_transaction/add_expense_screen.dart'; 
+import '../add_transaction/add_expense_screen.dart';
 import '../add_transaction/receipt_scanner.dart';
+import '../analytics/analytics_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -931,8 +932,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                  builder: (context) => const AddExpenseScreen()),
+              MaterialPageRoute(builder: (context) => const AddExpenseScreen()),
             );
           },
         ),
@@ -959,7 +959,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (context) => const ReceiptScannerScreen()),
+                builder: (context) => const ReceiptScannerScreen(),
+              ),
             );
           },
         ),
@@ -1021,68 +1022,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return BottomAppBar(
       shape: const CircularNotchedRectangle(),
       notchMargin: 8,
-      child: const Padding(
-        padding: EdgeInsets.only(top: 4.0),
+      child: Padding(
+        padding: const EdgeInsets.only(top: 4.0),
         child: SizedBox(
           height: 60,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _NavItem(icon: Icons.home, label: 'Home', isActive: true),
-              _NavItem(
-                icon: Icons.bar_chart,
-                label: 'Analytics',
-                isActive: false,
+              // Home Button
+              IconButton(
+                icon: const Icon(Icons.home_outlined),
+                onPressed: () {
+                  // Already on Dashboard
+                },
               ),
-              SizedBox(width: 40),
-              _NavItem(
-                icon: Icons.receipt_long,
-                label: 'Transactions',
-                isActive: false,
+
+              // Analytics Button - UPDATED
+              IconButton(
+                icon: const Icon(Icons.bar_chart_outlined),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AnalyticsScreen(),
+                    ),
+                  );
+                },
               ),
-              _NavItem(
-                icon: Icons.settings,
-                label: 'Settings',
-                isActive: false,
+
+              // Spacer for the center FloatingActionButton
+              const SizedBox(width: 40),
+
+              // Wallet Button
+              IconButton(
+                icon: const Icon(Icons.account_balance_wallet_outlined),
+                onPressed: () {
+                  // Logic for wallet/accounts
+                },
+              ),
+
+              // Profile Button
+              IconButton(
+                icon: const Icon(Icons.person_outline),
+                onPressed: () {
+                  // Logic for profile/settings
+                },
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isActive;
-
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.isActive,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          color: isActive ? const Color(0xFF6C63FF) : const Color(0xFF718096),
-          size: 24,
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: isActive ? const Color(0xFF6C63FF) : const Color(0xFF718096),
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ],
     );
   }
 }
