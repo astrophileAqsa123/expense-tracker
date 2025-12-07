@@ -4,10 +4,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../add_transaction/add_income_screen.dart';
-// 💡 Required imports for navigation
 import '../add_transaction/add_expense_screen.dart';
 import '../add_transaction/receipt_scanner.dart';
 import '../analytics/analytics_screen.dart';
+import '../setting/setting.dart';
+import '../budget/budget_setup_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -45,7 +46,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             // 1. Main Scrollable Content
             CustomScrollView(
               slivers: [
-                _buildAppBar(user),
+                _buildAppBar(userId),
                 SliverToBoxAdapter(
                   child: Column(
                     children: [
@@ -112,7 +113,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // --- WIDGET DEFINITIONS ---
 
-  Widget _buildAppBar(User? user) {
+Widget _buildAppBar(String userId) {
     return SliverAppBar(
       expandedHeight: 110,
       floating: false,
@@ -120,84 +121,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
       backgroundColor: const Color(0xFF6C63FF),
       elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF6C63FF), Color(0xFF5A52D5)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
+        background: StreamBuilder<DocumentSnapshot>(
+          stream: _firestore.collection('users').doc(userId).snapshots(),
+          builder: (context, snapshot) {
+            String displayName = "User";
+            String? photoUrl;
+
+            if (snapshot.hasData && snapshot.data!.exists) {
+              final userData = snapshot.data!.data() as Map<String, dynamic>;
+              displayName = userData['name'] ?? "User";
+              photoUrl = userData['profilePhoto']; // Field updated from Edit Profile
+            }
+
+            return Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF6C63FF), Color(0xFF5A52D5)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  CircleAvatar(
-                    radius: 25,
-                    backgroundImage: user?.photoURL != null
-                        ? NetworkImage(user!.photoURL!)
-                        : null,
-                    backgroundColor: Colors.white24,
-                    child: user?.photoURL == null
-                        ? const Icon(
-                            Icons.person,
-                            size: 18,
-                            color: Colors.white,
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 9),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Row(
                     children: [
-                      const Text(
-                        'Welcome back,',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      CircleAvatar(
+                        radius: 25,
+                        backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                        backgroundColor: Colors.white24,
+                        child: photoUrl == null ? const Icon(Icons.person, color: Colors.white) : null,
                       ),
-                      Text(
-                        user?.displayName ?? 'User',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      const SizedBox(width: 9),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('Welcome back,', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                          Text(displayName, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                        ],
                       ),
                     ],
                   ),
+                  const Icon(Icons.notifications_outlined, color: Colors.white, size: 28),
                 ],
               ),
-              Stack(
-                children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.notifications_outlined,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                    onPressed: () {},
-                  ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Text(
-                        '3',
-                        style: TextStyle(color: Colors.white, fontSize: 10),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -1023,53 +994,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
       shape: const CircularNotchedRectangle(),
       notchMargin: 8,
       child: Padding(
-        padding: const EdgeInsets.only(top: 4.0),
-        child: SizedBox(
-          height: 60,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              // Home Button
-              IconButton(
-                icon: const Icon(Icons.home_outlined),
-                onPressed: () {
-                  // Already on Dashboard
-                },
-              ),
-
-              // Analytics Button - UPDATED
-              IconButton(
-                icon: const Icon(Icons.bar_chart_outlined),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AnalyticsScreen(),
-                    ),
-                  );
-                },
-              ),
-
-              // Spacer for the center FloatingActionButton
-              const SizedBox(width: 40),
-
-              // Wallet Button
-              IconButton(
-                icon: const Icon(Icons.account_balance_wallet_outlined),
-                onPressed: () {
-                  // Logic for wallet/accounts
-                },
-              ),
-
-              // Profile Button
-              IconButton(
-                icon: const Icon(Icons.person_outline),
-                onPressed: () {
-                  // Logic for profile/settings
-                },
-              ),
-            ],
-          ),
+        padding: const EdgeInsets.symmetric(vertical: 4.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            IconButton(icon: const Icon(Icons.home), onPressed: () {}),
+            IconButton(
+              icon: const Icon(Icons.bar_chart),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AnalyticsScreen(),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(width: 40), // Spacer for FAB
+            // 💡 Wallet icon now navigates to Budget Setup Page
+            IconButton(
+              icon: const Icon(Icons.account_balance_wallet_outlined),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const BudgetSetupScreen(),
+                  ),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
