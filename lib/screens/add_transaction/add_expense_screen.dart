@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// --- Theme Colors (consistent with Dashboard and Income Screen) ---
-const Color kPrimaryColor = Color(0xFF6C63FF); // Main Purple/Indigo
-const Color kPrimaryDarkColor = Color(0xFF5A52D5); // Darker shade for gradient
-const Color kBackgroundColor = Color(0xFFF5F7FA); // Light background grey
-const Color kTextColor = Color(0xFF2D3748); // Dark text
-const Color kSuccessColor = Color(0xFF4CAF50); // Green for success/income
-const Color kErrorColor = Color(0xFFF44336); // General Red for error messages
-const Color kExpenseColor = Color(0xFFE53935); // Prominent Red tone for expense actions
+// --- Theme Colors ---
+const Color kPrimaryColor = Color(0xFF6C63FF);
+const Color kBackgroundColor = Color(0xFFF5F7FA);
+const Color kTextColor = Color(0xFF2D3748);
+const Color kErrorColor = Color(0xFFF44336);
+const Color kExpenseColor = Color(0xFFE53935);
 
 class AddExpenseScreen extends StatefulWidget {
   const AddExpenseScreen({super.key});
@@ -20,14 +18,16 @@ class AddExpenseScreen extends StatefulWidget {
 
 class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  final titleCtrl = TextEditingController();
   final amountCtrl = TextEditingController();
-  final descriptionCtrl = TextEditingController();
+  final notesCtrl = TextEditingController();
+
   String selectedCategory = "Food";
   bool loading = false;
 
   final List<String> categories = [
     "Food",
-    "Transport",
     "Transport",
     "Shopping",
     "Bills",
@@ -36,9 +36,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     "Education",
     "Rent",
     "Travel",
-    "Other"
+    "Other",
   ];
 
+  // ---------------- ADD EXPENSE ----------------
   Future<void> _addExpense() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -46,57 +47,51 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("User not logged in")),
-      );
+      setState(() => loading = false);
       return;
     }
 
-    String uid = user.uid;
-    double amount = double.parse(amountCtrl.text.trim());
+    final uid = user.uid;
+    final amount = double.parse(amountCtrl.text.trim());
+    final now = DateTime.now();
 
     try {
       final userDoc = FirebaseFirestore.instance.collection("users").doc(uid);
 
-      // Ensure balance map exists (using SetOptions.merge: true)
-      DocumentSnapshot snap = await userDoc.get();
-      if (!snap.exists || !(snap.data() as Map<String, dynamic>).containsKey('balance')) {
+      // Ensure balance exists
+      final snap = await userDoc.get();
+      if (!snap.exists ||
+          !(snap.data() as Map<String, dynamic>)
+              .containsKey('balance')) {
         await userDoc.set({
           "balance": {
             "totalBalance": 0.0,
-            "monthlyIncome": 0.0, // Include income for completeness
+            "monthlyIncome": 0.0,
             "monthlyExpense": 0.0,
           }
         }, SetOptions(merge: true));
       }
 
-      // 1️⃣ Save the expense in: users → uid → expenses
-      await userDoc.collection("expenses").add({
-        "amount": amount,
-        "category": selectedCategory,
-        "description": descriptionCtrl.text.trim(),
-        "date": DateTime.now(),
-      });
-
-      // 2️⃣ Also save in transactions for dashboard history
+      // Save to transactions (MAIN SOURCE)
       await userDoc.collection("transactions").add({
+        "title": titleCtrl.text.trim(),
         "amount": amount,
         "type": "expense",
         "category": selectedCategory,
-        "description": descriptionCtrl.text.trim(),
-        "date": DateTime.now(),
+        "notes": notesCtrl.text.trim(),
+        "date": now,
       });
 
-      // 3️⃣ Update user's balance values
+      // Update balance
       await userDoc.update({
-        "balance.totalBalance": FieldValue.increment(-amount), // Deduct
+        "balance.totalBalance": FieldValue.increment(-amount),
         "balance.monthlyExpense": FieldValue.increment(amount),
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Expense added successfully!"),
+            content: Text("Expense added successfully"),
             backgroundColor: kExpenseColor,
           ),
         );
@@ -114,87 +109,88 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     }
   }
 
+  // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
-        title: const Text("Add Expense", 
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
-        ),
-        // --- Improved AppBar Theming (using Expense gradient) ---
+        title: const Text("Add Expense",
+            style: TextStyle(color: Colors.white)),
         backgroundColor: kExpenseColor,
         iconTheme: const IconThemeData(color: Colors.white),
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [kExpenseColor, Color(0xFFC62828)], // A slightly darker red
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        // --- End Improved AppBar Theming ---
       ),
       body: loading
-          ? const Center(child: CircularProgressIndicator(color: kPrimaryColor))
+          ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.all(20),
               child: Form(
                 key: _formKey,
                 child: ListView(
                   children: [
-                    // Amount Field
-                    _buildStyledTextFormField(
+                    // TITLE
+                    _field(
+                      controller: titleCtrl,
+                      label: "Title",
+                      icon: Icons.title,
+                      validator: (v) =>
+                          v == null || v.isEmpty ? "Enter title" : null,
+                    ),
+                    const SizedBox(height: 15),
+
+                    // AMOUNT
+                    _field(
                       controller: amountCtrl,
-                      labelText: "Amount",
-                      prefixIcon: Icons.money_off,
-                      keyboardType: TextInputType.number,
+                      label: "Amount",
+                      icon: Icons.money_off,
+                      keyboard: TextInputType.number,
                       validator: (v) {
-                        if (v == null || v.isEmpty) return "Enter expense amount";
-                        if (double.tryParse(v) == null) return "Invalid number";
+                        if (v == null || v.isEmpty) {
+                          return "Enter amount";
+                        }
+                        if (double.tryParse(v) == null) {
+                          return "Invalid number";
+                        }
                         return null;
                       },
                     ),
                     const SizedBox(height: 15),
 
-                    // Category Dropdown
+                    // CATEGORY
                     DropdownButtonFormField<String>(
                       value: selectedCategory,
                       items: categories
-                          .map((cat) => DropdownMenuItem(
-                                value: cat,
-                                child: Text(cat, style: const TextStyle(color: kTextColor)),
+                          .map((c) => DropdownMenuItem(
+                                value: c,
+                                child: Text(c),
                               ))
                           .toList(),
-                      onChanged: (v) => setState(() => selectedCategory = v!),
-                      decoration: _inputDecoration.copyWith(
-                        labelText: "Category",
-                        // Use Expense Color for category icon
-                        prefixIcon: const Icon(Icons.category, color: kExpenseColor),
+                      onChanged: (v) =>
+                          setState(() => selectedCategory = v!),
+                      decoration: _decoration(
+                        "Category",
+                        Icons.category,
                       ),
                     ),
                     const SizedBox(height: 15),
 
-                    // Description
-                    _buildStyledTextFormField(
-                      controller: descriptionCtrl,
-                      labelText: "Description (optional)",
-                      prefixIcon: Icons.description,
+                    // NOTES (OPTIONAL)
+                    _field(
+                      controller: notesCtrl,
+                      label: "Notes (optional)",
+                      icon: Icons.notes,
+                      maxLines: 3,
                     ),
                     const SizedBox(height: 30),
 
-                    // Add Button
                     ElevatedButton(
                       onPressed: _addExpense,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: kExpenseColor, // Use Expense Color
+                        backgroundColor: kExpenseColor,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        elevation: 5, // Add subtle shadow for lift
                       ),
                       child: const Text(
                         "Add Expense",
@@ -212,49 +208,33 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     );
   }
 
-  // --- Reusable TextField Styling (Consistent with Income Screen) ---
-  final InputDecoration _inputDecoration = const InputDecoration(
-    // Base border definition
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(12)),
-    ),
-    // Border when not focused
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(12)),
-      borderSide: BorderSide(color: Color(0xFFE2E8F0), width: 1.5), // Light grey border
-    ),
-    // Border when focused (Primary Color, regardless of income/expense)
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(12)),
-      borderSide: BorderSide(color: kPrimaryColor, width: 2),
-    ),
-    labelStyle: TextStyle(color: Color(0xFF718096)), // Subtle label color
-    contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-    filled: true,
-    fillColor: Colors.white, // Ensures fields stand out against background
-  );
+  // ---------------- HELPERS ----------------
+  InputDecoration _decoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      prefixIcon: Icon(icon, color: kExpenseColor),
+      filled: true,
+      fillColor: Colors.white,
+    );
+  }
 
-  Widget _buildStyledTextFormField({
+  Widget _field({
     required TextEditingController controller,
-    required String labelText,
-    required IconData prefixIcon,
-    TextInputType keyboardType = TextInputType.text,
+    required String label,
+    required IconData icon,
+    TextInputType keyboard = TextInputType.text,
+    int maxLines = 1,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
-      keyboardType: keyboardType,
+      keyboardType: keyboard,
+      maxLines: maxLines,
       validator: validator,
-      style: const TextStyle(color: kTextColor, fontSize: 16),
-      decoration: _inputDecoration.copyWith(
-        labelText: labelText,
-        // Use Expense Color for the prefix icon
-        prefixIcon: Padding(
-          padding: const EdgeInsets.only(left: 10.0, right: 8.0),
-          child: Icon(prefixIcon, color: kExpenseColor, size: 24),
-        ),
-        prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-      ),
+      decoration: _decoration(label, icon),
     );
   }
 }

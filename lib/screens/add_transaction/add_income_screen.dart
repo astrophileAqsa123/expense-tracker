@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// --- Theme Colors from Dashboard ---
-const Color kPrimaryColor = Color(0xFF6C63FF); // Main Purple/Indigo
-const Color kPrimaryDarkColor = Color(0xFF5A52D5); // Darker shade for gradient
-const Color kBackgroundColor = Color(0xFFF5F7FA); // Light background grey
-const Color kTextColor = Color(0xFF2D3748); // Dark text
-const Color kSuccessColor = Color(0xFF4CAF50); // Green for success/income
-const Color kErrorColor = Color(0xFFF44336); // Red for error/expense
+const Color kPrimaryColor = Color(0xFF6C63FF);
+const Color kPrimaryDarkColor = Color(0xFF5A52D5); 
+const Color kBackgroundColor = Color(0xFFF5F7FA); 
+const Color kTextColor = Color(0xFF2D3748);
+const Color kSuccessColor = Color(0xFF4CAF50); 
+const Color kErrorColor = Color(0xFFF44336);
 
 class AddIncomeScreen extends StatefulWidget {
   const AddIncomeScreen({super.key});

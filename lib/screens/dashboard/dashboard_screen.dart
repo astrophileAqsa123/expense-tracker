@@ -9,6 +9,8 @@ import '../add_transaction/receipt_scanner.dart';
 import '../analytics/analytics_screen.dart';
 import '../setting/setting.dart';
 import '../budget/budget_setup_screen.dart';
+// 1. ADD NEW IMPORT FOR THE TRANSACTION SCREEN
+import '../transactions/transactions_screen.dart'; // <--- ASSUMED PATH
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -113,6 +115,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // --- WIDGET DEFINITIONS ---
 
+// 1. UPDATED: _buildAppBar to stream profile photo and name
 Widget _buildAppBar(String userId) {
     return SliverAppBar(
       expandedHeight: 110,
@@ -121,17 +124,28 @@ Widget _buildAppBar(String userId) {
       backgroundColor: const Color(0xFF6C63FF),
       elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
+        // StreamBuilder listens to the 'users' document for real-time profile updates
         background: StreamBuilder<DocumentSnapshot>(
           stream: _firestore.collection('users').doc(userId).snapshots(),
           builder: (context, snapshot) {
             String displayName = "User";
             String? photoUrl;
 
+            // Check if data is available and exists
             if (snapshot.hasData && snapshot.data!.exists) {
-              final userData = snapshot.data!.data() as Map<String, dynamic>;
-              displayName = userData['name'] ?? "User";
-              photoUrl = userData['profilePhoto']; // Field updated from Edit Profile
+              final userData = snapshot.data!.data() as Map<String, dynamic>?;
+              // Safely access fields. 'name' is the user name.
+              displayName = userData?['name'] ?? "User";
+              // 'profilePhoto' is the photo URL, updated from the Edit Profile screen.
+              photoUrl = userData?['profilePhoto']; 
             }
+            
+            // Handle loading state
+            if (snapshot.connectionState == ConnectionState.waiting) {
+               // Optionally show a basic placeholder while loading
+               displayName = "Loading...";
+            }
+
 
             return Container(
               decoration: const BoxDecoration(
@@ -147,11 +161,18 @@ Widget _buildAppBar(String userId) {
                 children: [
                   Row(
                     children: [
+                      // PROFILE PHOTO LOGIC
                       CircleAvatar(
                         radius: 25,
-                        backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                        // Use NetworkImage if photoUrl is available and valid
+                        backgroundImage: (photoUrl != null && photoUrl.isNotEmpty) 
+                            ? NetworkImage(photoUrl) 
+                            : null,
                         backgroundColor: Colors.white24,
-                        child: photoUrl == null ? const Icon(Icons.person, color: Colors.white) : null,
+                        // Fallback icon if no photoUrl
+                        child: (photoUrl == null || photoUrl.isEmpty) 
+                            ? const Icon(Icons.person, color: Colors.white) 
+                            : null,
                       ),
                       const SizedBox(width: 9),
                       Column(
@@ -159,6 +180,7 @@ Widget _buildAppBar(String userId) {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Text('Welcome back,', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                          // Display the fetched user name
                           Text(displayName, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                         ],
                       ),
@@ -718,6 +740,7 @@ Widget _buildAppBar(String userId) {
     );
   }
 
+  // 2. UPDATED: _buildRecentTransactions to navigate to TransactionScreen on 'View All'
   Widget _buildRecentTransactions(String userId) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -737,7 +760,13 @@ Widget _buildAppBar(String userId) {
               ),
               TextButton(
                 onPressed: () {
-                  // Navigate to all transactions
+                  // Navigate to the TransactionScreen when 'View All' is clicked
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TransactionsScreen(),
+                    ),
+                  );
                 },
                 child: const Text('View All'),
               ),
@@ -1010,8 +1039,7 @@ Widget _buildAppBar(String userId) {
                 );
               },
             ),
-            const SizedBox(width: 40), // Spacer for FAB
-            // 💡 Wallet icon now navigates to Budget Setup Page
+            const SizedBox(width: 48), // Spacer for the FAB
             IconButton(
               icon: const Icon(Icons.account_balance_wallet_outlined),
               onPressed: () {
@@ -1038,3 +1066,18 @@ Widget _buildAppBar(String userId) {
     );
   }
 }
+
+// NOTE: You must create the TransactionScreen class for the 'View All'
+// functionality to work without errors.
+/*
+class TransactionScreen extends StatelessWidget {
+  const TransactionScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('All Transactions')),
+      body: const Center(child: Text('This is the dedicated Transaction Screen')),
+    );
+  }
+}
+*/
