@@ -38,6 +38,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     "Other",
   ];
 
+  @override
+  void dispose() {
+    titleCtrl.dispose();
+    amountCtrl.dispose();
+    notesCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _submitExpense() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -58,7 +66,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             backgroundColor: kExpenseColor,
           ),
         );
-        Navigator.pop(context, true); // Return true to refresh previous screen
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -91,27 +99,44 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 key: _formKey,
                 child: ListView(
                   children: [
-                    _field(titleCtrl, "Title", Icons.title,
-                        validator: (v) => v == null || v.isEmpty ? "Enter title" : null),
+                    _field(
+                      titleCtrl,
+                      "Title",
+                      Icons.title,
+                      validator: (v) =>
+                          v == null || v.trim().isEmpty ? "Enter title" : null,
+                    ),
                     const SizedBox(height: 15),
-                    _field(amountCtrl, "Amount", Icons.money_off,
-                        keyboard: TextInputType.number,
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return "Enter amount";
-                          if (double.tryParse(v) == null) return "Invalid number";
-                          return null;
-                        }),
+                    _field(
+                      amountCtrl,
+                      "Amount",
+                      Icons.money_off,
+                      keyboard: TextInputType.number,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return "Enter amount";
+                        final n = double.tryParse(v.trim());
+                        if (n == null) return "Invalid number";
+                        if (n <= 0) return "Amount must be > 0";
+                        return null;
+                      },
+                    ),
                     const SizedBox(height: 15),
                     DropdownButtonFormField<String>(
                       value: selectedCategory,
                       items: categories
-                          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                          .map((c) =>
+                              DropdownMenuItem(value: c, child: Text(c)))
                           .toList(),
                       onChanged: (v) => setState(() => selectedCategory = v!),
                       decoration: _decoration("Category", Icons.category),
                     ),
                     const SizedBox(height: 15),
-                    _field(notesCtrl, "Notes (optional)", Icons.notes, maxLines: 3),
+                    _field(
+                      notesCtrl,
+                      "Notes (optional)",
+                      Icons.notes,
+                      maxLines: 3,
+                    ),
                     const SizedBox(height: 30),
                     ElevatedButton(
                       onPressed: _submitExpense,

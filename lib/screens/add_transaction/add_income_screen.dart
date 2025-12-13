@@ -21,6 +21,7 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
   final _formKey = GlobalKey<FormState>();
   final amountCtrl = TextEditingController();
   final descriptionCtrl = TextEditingController();
+
   String selectedCategory = "Salary";
   bool loading = false;
 
@@ -33,6 +34,13 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
     "Other"
   ];
 
+  @override
+  void dispose() {
+    amountCtrl.dispose();
+    descriptionCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _addIncome() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -40,10 +48,12 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("User not logged in")),
-      );
-      setState(() => loading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("User not logged in")),
+        );
+        setState(() => loading = false);
+      }
       return;
     }
 
@@ -53,9 +63,11 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
     try {
       final userDoc = FirebaseFirestore.instance.collection("users").doc(uid);
 
-      // Ensure balance exists
+      // ✅ Ensure user/balance exists
       final snap = await userDoc.get();
-      if (!snap.exists || !(snap.data() as Map<String, dynamic>).containsKey('balance')) {
+      final data = snap.data() as Map<String, dynamic>?;
+
+      if (!snap.exists || data == null || !data.containsKey('balance')) {
         await userDoc.set({
           "balance": {
             "totalBalance": 0.0,
@@ -65,15 +77,7 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
         }, SetOptions(merge: true));
       }
 
-      // Save income
-      await userDoc.collection("incomes").add({
-        "amount": amount,
-        "category": selectedCategory,
-        "description": descriptionCtrl.text.trim(),
-        "date": DateTime.now(),
-      });
-
-      // Save transaction
+      // ✅ SINGLE SOURCE OF TRUTH: Save income into "transactions"
       await userDoc.collection("transactions").add({
         "amount": amount,
         "type": "income",
@@ -82,7 +86,15 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
         "date": DateTime.now(),
       });
 
-      // Update balance
+      // (Optional) If you still want a separate incomes collection, enable this:
+      // await userDoc.collection("incomes").add({
+      //   "amount": amount,
+      //   "category": selectedCategory,
+      //   "description": descriptionCtrl.text.trim(),
+      //   "date": DateTime.now(),
+      // });
+
+      // ✅ Update balance
       await userDoc.update({
         "balance.totalBalance": FieldValue.increment(amount),
         "balance.monthlyIncome": FieldValue.increment(amount),
@@ -95,7 +107,7 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
             backgroundColor: kSuccessColor,
           ),
         );
-        Navigator.pop(context, true); // Refresh dashboard
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -149,6 +161,7 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                       validator: (v) {
                         if (v == null || v.isEmpty) return "Enter amount";
                         if (double.tryParse(v) == null) return "Invalid number";
+                        if (double.parse(v) <= 0) return "Amount must be > 0";
                         return null;
                       },
                     ),
@@ -158,13 +171,17 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                       items: categories
                           .map((cat) => DropdownMenuItem(
                                 value: cat,
-                                child: Text(cat, style: const TextStyle(color: kTextColor)),
+                                child: Text(
+                                  cat,
+                                  style: const TextStyle(color: kTextColor),
+                                ),
                               ))
                           .toList(),
                       onChanged: (v) => setState(() => selectedCategory = v!),
                       decoration: _inputDecoration.copyWith(
                         labelText: "Category",
-                        prefixIcon: const Icon(Icons.category, color: kPrimaryColor),
+                        prefixIcon:
+                            const Icon(Icons.category, color: kPrimaryColor),
                       ),
                     ),
                     const SizedBox(height: 15),
@@ -201,7 +218,9 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
   }
 
   final InputDecoration _inputDecoration = const InputDecoration(
-    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(12)),
+    ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.all(Radius.circular(12)),
       borderSide: BorderSide(color: Color(0xFFE2E8F0), width: 1.5),

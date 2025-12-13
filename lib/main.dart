@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -22,8 +23,9 @@ import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/setting/setting.dart';
 import 'screens/setting/profile_edit_screen.dart';
 import 'screens/budget/advanced_budget_screen.dart';
-import 'screens/analytics/analytics_screen.dart'; // ✅ ADD THIS
+import 'screens/analytics/analytics_screen.dart';
 import 'screens/add_transaction/add_expense_screen.dart';
+import 'screens/pdf/pdf.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,22 +44,12 @@ class RootApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<ThemeProvider>(
-          create: (_) => ThemeProvider(),
-        ),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        Provider<AuthService>(create: (_) => AuthService()),
 
-        Provider<AuthService>(
-          create: (_) => AuthService(),
-          lazy: true,
-        ),
-
-        ChangeNotifierProvider<TransactionProvider>(
-          create: (_) => TransactionProvider(),
-        ),
-
-        ChangeNotifierProvider<AnalyticProvider>(
-          create: (_) => AnalyticProvider(),
-        ),
+        // ✅ Single instance providers for whole app
+        ChangeNotifierProvider(create: (_) => TransactionProvider()),
+        ChangeNotifierProvider(create: (_) => AnalyticProvider()),
       ],
       child: const MyApp(),
     );
@@ -92,7 +84,9 @@ class MyApp extends StatelessWidget {
         "/advanced_budget": (_) => const AdvancedBudgetScreen(),
         "/analytics": (_) => const AnalyticsScreen(),
         "/expense": (_) => const AddExpenseScreen(),
+        "/pdf": (_) => const PdfGenerateScreen(),
       },
     );
   }
 }
+

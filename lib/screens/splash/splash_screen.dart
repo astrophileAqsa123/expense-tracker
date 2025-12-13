@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-/// Define app-specific gradient colors
 class AppColors {
   static const Color primaryTeal = Color(0xFF00C896);
   static const Color primaryBlue = Color(0xFF0077B6);
@@ -10,11 +10,7 @@ class AppColors {
   static const Color midBackground = Color(0xFFE5E5E5);
 }
 
-/// SplashScreen displays app branding and navigates after a delay
 class SplashScreen extends StatefulWidget {
-  /// Route to navigate to after the splash
-  static const String nextRoute = "/login";
-
   const SplashScreen({super.key});
 
   @override
@@ -25,15 +21,21 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _navigateAfterDelay();
+    _goNext();
   }
 
-  /// Starts a timer to navigate to the next screen
-  void _navigateAfterDelay() {
-    // Simulate initialization/loading if needed
-    Timer(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed(SplashScreen.nextRoute);
+  void _goNext() {
+    Timer(const Duration(seconds: 2), () {
+      if (!mounted) return;
+
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user != null) {
+        // ✅ already logged in
+        Navigator.pushReplacementNamed(context, "/dashboard");
+      } else {
+        // ❌ not logged in
+        Navigator.pushReplacementNamed(context, "/login");
       }
     });
   }
@@ -41,7 +43,6 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Gradient background
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -54,7 +55,6 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // App Icon with gradient and shadow
               Container(
                 width: 120,
                 height: 120,
@@ -69,7 +69,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     BoxShadow(
                       color: AppColors.primaryBlue.withOpacity(0.3),
                       blurRadius: 20,
-                      offset: Offset(0, 10),
+                      offset: const Offset(0, 10),
                     ),
                   ],
                 ),
@@ -79,10 +79,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   size: 72,
                 ),
               ),
-
               const SizedBox(height: 32),
-
-              // App Name
               const Text(
                 'Expense Tracker',
                 style: TextStyle(
@@ -92,10 +89,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   letterSpacing: -0.5,
                 ),
               ),
-
               const SizedBox(height: 8),
-
-              // Tagline
               const Text(
                 'Smart Money. Simple Tracking.',
                 style: TextStyle(
@@ -104,16 +98,11 @@ class _SplashScreenState extends State<SplashScreen> {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-
               const SizedBox(height: 80),
-
-              // Loading indicator
-              CircularProgressIndicator(
+              const CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
                 strokeWidth: 3,
               ),
-
-              const SizedBox(height: 20),
             ],
           ),
         ),

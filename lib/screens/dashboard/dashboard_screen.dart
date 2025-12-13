@@ -12,6 +12,12 @@ import '../setting/setting.dart';
 import '../budget/budget_setup_screen.dart';
 import '../transactions/transactions_screen.dart';
 
+// ✅ PDF Screen Import (adjust path if needed)
+import '../pdf/pdf.dart';
+
+// ✅ Notifications Screen Import (adjust path if needed)
+import '../notification/notification_screen.dart';
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -68,7 +74,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ],
             ),
-
             Positioned(
               bottom: 80,
               right: 20,
@@ -82,14 +87,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
-
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
               child: _buildBottomNavigationBar(),
             ),
-
             Positioned(
               bottom: 30,
               left: (MediaQuery.of(context).size.width / 2) - 30,
@@ -109,7 +112,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ✅ UPDATED APP BAR: listens to Firestore user doc and updates photo instantly
+  // ✅ UPDATED APP BAR:
+  // - Notification icon navigates to NotificationScreen
+  // - Shows badge with unread notifications count (resolved == false)
   Widget _buildAppBar(String userId) {
     return SliverAppBar(
       expandedHeight: 110,
@@ -133,30 +138,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if (snapshot.hasData && snapshot.data!.exists) {
               final userData = snapshot.data!.data();
 
-              // Name field (your app stores it as 'name')
               displayName =
                   (userData?['name'] as String?) ??
                   (authUser?.displayName ?? "User");
 
-              // ✅ Use 'photoUrl' from Firestore (recommended)
               final String? dbPhotoUrl = userData?['photoUrl'] as String?;
-
-              // optional: cache buster
               final photoUpdatedAt = userData?['photoUpdatedAt'];
 
               if (dbPhotoUrl != null && dbPhotoUrl.isNotEmpty) {
                 photoUrl = dbPhotoUrl;
-
-                // If you store timestamp, add it to force refresh
                 if (photoUpdatedAt != null) {
                   photoUrl = "$photoUrl?v=${photoUpdatedAt.toString()}";
                 }
               } else {
-                // Fallback to FirebaseAuth photoURL if Firestore missing
                 photoUrl = authUser?.photoURL;
               }
             } else {
-              // fallback if user doc doesn't exist yet
               displayName = authUser?.displayName ?? "User";
               photoUrl = authUser?.photoURL;
             }
@@ -179,8 +176,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         radius: 25,
                         backgroundImage:
                             (photoUrl != null && photoUrl.isNotEmpty)
-                            ? NetworkImage(photoUrl)
-                            : null,
+                                ? NetworkImage(photoUrl)
+                                : null,
                         backgroundColor: Colors.white24,
                         child: (photoUrl == null || photoUrl.isEmpty)
                             ? const Icon(Icons.person, color: Colors.white)
@@ -210,10 +207,92 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ],
                   ),
-                  const Icon(
-                    Icons.notifications_outlined,
-                    color: Colors.white,
-                    size: 28,
+
+                  // ✅ PDF + Notifications (with unread badge)
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
+                        tooltip: "Download PDF Report",
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const PdfGenerateScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 4),
+
+                      // ✅ Notification badge using alerts collection
+                      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                        stream: _firestore
+                            .collection('users')
+                            .doc(userId)
+                            .collection('alerts')
+                            .where('resolved', isEqualTo: false)
+                            .snapshots(),
+                        builder: (context, alertSnap) {
+                          final unreadCount = alertSnap.data?.docs.length ?? 0;
+
+                          return Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.notifications_outlined,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                                tooltip: "Notifications",
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const NotificationScreen(),
+                                    ),
+                                  );
+                                },
+                              ),
+                              if (unreadCount > 0)
+                                Positioned(
+                                  right: 6,
+                                  top: 6,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 18,
+                                      minHeight: 18,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        unreadCount > 99 ? "99+" : "$unreadCount",
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -223,6 +302,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+
+  // --- NO OTHER CHANGES BELOW ---
 
   Widget _buildBalanceCard(String userId) {
     return StreamBuilder<DocumentSnapshot>(
@@ -612,19 +693,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const Color(0xFFFF9F40),
         ];
 
-        double total = categoryTotals.values.fold(
-          0,
-          (sum, amount) => sum + amount,
-        );
+        double total = categoryTotals.values.fold(0, (sum, amount) => sum + amount);
         int index = 0;
 
         categoryTotals.forEach((category, amount) {
           sections.add(
             PieChartSectionData(
               value: amount,
-              title: total > 0
-                  ? '${(amount / total * 100).toStringAsFixed(0)}%'
-                  : '0%',
+              title: total > 0 ? '${(amount / total * 100).toStringAsFixed(0)}%' : '0%',
               color: colors[index % colors.length],
               radius: 60,
               titleStyle: const TextStyle(
@@ -650,46 +726,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildCategoriesGrid() {
     final categories = [
-      {
-        'name': 'Food',
-        'icon': Icons.restaurant,
-        'color': const Color(0xFFFF6384),
-      },
-      {
-        'name': 'Transport',
-        'icon': Icons.directions_car,
-        'color': const Color(0xFF36A2EB),
-      },
-      {
-        'name': 'Shopping',
-        'icon': Icons.shopping_bag,
-        'color': const Color(0xFFFFCE56),
-      },
-      {
-        'name': 'Bills',
-        'icon': Icons.receipt,
-        'color': const Color(0xFF4BC0C0),
-      },
-      {
-        'name': 'Entertain',
-        'icon': Icons.movie,
-        'color': const Color(0xFF9966FF),
-      },
-      {
-        'name': 'Health',
-        'icon': Icons.local_hospital,
-        'color': const Color(0xFFFF9F40),
-      },
-      {
-        'name': 'Education',
-        'icon': Icons.school,
-        'color': const Color(0xFF4CAF50),
-      },
-      {
-        'name': 'Other',
-        'icon': Icons.more_horiz,
-        'color': const Color(0xFF9E9E9E),
-      },
+      {'name': 'Food', 'icon': Icons.restaurant, 'color': const Color(0xFFFF6384)},
+      {'name': 'Transport', 'icon': Icons.directions_car, 'color': const Color(0xFF36A2EB)},
+      {'name': 'Shopping', 'icon': Icons.shopping_bag, 'color': const Color(0xFFFFCE56)},
+      {'name': 'Bills', 'icon': Icons.receipt, 'color': const Color(0xFF4BC0C0)},
+      {'name': 'Entertain', 'icon': Icons.movie, 'color': const Color(0xFF9966FF)},
+      {'name': 'Health', 'icon': Icons.local_hospital, 'color': const Color(0xFFFF9F40)},
+      {'name': 'Education', 'icon': Icons.school, 'color': const Color(0xFF4CAF50)},
+      {'name': 'Other', 'icon': Icons.more_horiz, 'color': const Color(0xFF9E9E9E)},
     ];
 
     return Container(
@@ -699,11 +743,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           const Text(
             'Categories',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2D3748),
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2D3748)),
           ),
           const SizedBox(height: 16),
           GridView.builder(
@@ -750,10 +790,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       const SizedBox(height: 8),
                       Text(
                         category['name'] as String,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF718096),
-                        ),
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF718096)),
                       ),
                     ],
                   ),
@@ -777,19 +814,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               const Text(
                 'Recent Transactions',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2D3748),
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2D3748)),
               ),
               TextButton(
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const TransactionsScreen(),
-                    ),
+                    MaterialPageRoute(builder: (context) => const TransactionsScreen()),
                   );
                 },
                 child: const Text('View All'),
@@ -821,10 +852,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: const Center(
-                    child: Text(
-                      'No transactions yet',
-                      style: TextStyle(color: Color(0xFF718096)),
-                    ),
+                    child: Text('No transactions yet', style: TextStyle(color: Color(0xFF718096))),
                   ),
                 );
               }
@@ -912,19 +940,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text(
                   description,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF2D3748),
-                  ),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF2D3748)),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   DateFormat('MMM dd, yyyy').format(date),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF718096),
-                  ),
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF718096)),
                 ),
               ],
             ),
@@ -934,9 +955,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: isIncome
-                  ? const Color(0xFF4CAF50)
-                  : const Color(0xFFF44336),
+              color: isIncome ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
             ),
           ),
         ],
@@ -982,9 +1001,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const ReceiptScannerScreen(),
-              ),
+              MaterialPageRoute(builder: (context) => const ReceiptScannerScreen()),
             );
           },
         ),
@@ -1053,11 +1070,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             IconButton(
               icon: const Icon(Icons.bar_chart),
               onPressed: () {
-               Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
-                  );
-
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
+                );
               },
             ),
             const SizedBox(width: 48),
@@ -1066,9 +1082,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const BudgetSetupScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const BudgetSetupScreen()),
                 );
               },
             ),
@@ -1077,9 +1091,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
                 );
               },
             ),

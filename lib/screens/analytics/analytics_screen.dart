@@ -8,6 +8,8 @@ class AnalyticsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // IMPORTANT: do NOT create provider here if it's already in main.dart
+    // So remove ChangeNotifierProvider wrapper.
     return Consumer<AnalyticProvider>(
       builder: (context, txProvider, _) {
         if (txProvider.loading) {
@@ -36,11 +38,14 @@ class AnalyticsScreen extends StatelessWidget {
             children: [
               _buildSummaryCards(totalIncome, totalExpense, savings),
               const SizedBox(height: 20),
+
               _buildSectionTitle("Expense by Category"),
               _buildCategoryPieChart(categoryTotals),
+
               const SizedBox(height: 30),
-              _buildSectionTitle("Daily Expense Chart"),
-              _buildDailyBarChart(dailyTotals),
+
+              _buildSectionTitle("Daily Expense (Line Chart)"),
+              _buildDailyLineChart(dailyTotals),
             ],
           ),
         );
@@ -66,15 +71,21 @@ class AnalyticsScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 6)],
+          boxShadow: [
+            BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 6),
+          ],
         ),
         child: Column(
           children: [
-            Text(title, style: const TextStyle(fontSize: 14, color: Colors.black)),
+            Text(title, style: const TextStyle(fontSize: 14)),
             const SizedBox(height: 6),
             Text(
               amount.toStringAsFixed(2),
-              style: TextStyle(fontSize: 18, color: color, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -85,13 +96,15 @@ class AnalyticsScreen extends StatelessWidget {
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      child: Text(
+        title,
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
     );
   }
 
   Widget _buildCategoryPieChart(Map<String, double> data) {
     if (data.isEmpty) return const Center(child: Text("No expense data."));
-
     final sections = data.entries.map((entry) {
       return PieChartSectionData(
         value: entry.value,
@@ -103,7 +116,10 @@ class AnalyticsScreen extends StatelessWidget {
     return Container(
       height: 250,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: PieChart(
         PieChartData(
           sections: sections,
@@ -114,35 +130,88 @@ class AnalyticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDailyBarChart(Map<int, double> data) {
+  // ✅ LINE CHART FOR DAILY EXPENSES
+  Widget _buildDailyLineChart(Map<int, double> data) {
     if (data.isEmpty) return const Center(child: Text("No expense data."));
 
+    // Sort by day
+    final sortedDays = data.keys.toList()..sort();
+
+    // Convert to FlSpots: x=day, y=amount
+    final spots = sortedDays.map((day) {
+      return FlSpot(day.toDouble(), data[day]!.toDouble());
+    }).toList();
+
+    final maxY = data.values.isEmpty
+        ? 0.0
+        : data.values.reduce((a, b) => a > b ? a : b);
+    final maxX = sortedDays.isEmpty ? 30.0 : sortedDays.last.toDouble();
+
     return Container(
-      height: 280,
+      height: 300,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-      child: BarChart(
-        BarChartData(
-          gridData: FlGridData(show: false),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: LineChart(
+        LineChartData(
+          minX: 1,
+          maxX: maxX,
+          minY: 0,
+          maxY: (maxY <= 0) ? 100 : maxY + (maxY * 0.2),
+
+          gridData: FlGridData(show: true),
           borderData: FlBorderData(show: false),
-          barGroups: data.entries.map((e) {
-            return BarChartGroupData(
-              x: e.key,
-              barRods: [
-                BarChartRodData(toY: e.value, width: 14, color: Colors.red),
-              ],
-            );
-          }).toList(),
+
           titlesData: FlTitlesData(
-            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true)),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 42,
+                getTitlesWidget: (v, meta) {
+                  return Text(
+                    v.toInt().toString(),
+                    style: const TextStyle(fontSize: 10),
+                  );
+                },
+              ),
+            ),
+
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                getTitlesWidget: (v, meta) =>
-                    Text("${v.toInt()}", style: const TextStyle(fontSize: 10)),
+                interval: 2, // show every 2 days
+                getTitlesWidget: (v, meta) {
+                  final day = v.toInt();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      day.toString(),
+                      style: const TextStyle(fontSize: 10),
+                    ),
+                  );
+                },
               ),
             ),
           ),
+
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              barWidth: 3,
+              dotData: FlDotData(show: true),
+              belowBarData: BarAreaData(show: true), // fill under line
+            ),
+          ],
         ),
       ),
     );
