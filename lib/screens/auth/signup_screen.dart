@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -11,14 +12,13 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
-  final auth = AuthService();
 
   final nameCtrl = TextEditingController();
   final emailCtrl = TextEditingController();
   final passCtrl = TextEditingController();
   final incomeCtrl = TextEditingController();
-  String selectedCurrency = "USD";
 
+  String selectedCurrency = "USD";
   bool loading = false;
   bool _obscureText = true;
 
@@ -37,6 +37,8 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => loading = true);
 
     try {
+      final auth = context.read<AuthService>();
+
       final user = await auth.register(
         name: nameCtrl.text.trim(),
         email: emailCtrl.text.trim(),
@@ -57,9 +59,17 @@ class _SignupScreenState extends State<SignupScreen> {
       }
     } on FirebaseAuthException catch (e) {
       String msg = "Signup failed!";
-      if (e.code == "email-already-in-use") msg = "Email already in use.";
-      if (e.code == "weak-password") msg = "Password is too weak.";
-      if (e.code == "invalid-email") msg = "Invalid email address.";
+      switch (e.code) {
+        case "email-already-in-use":
+          msg = "Email already in use.";
+          break;
+        case "weak-password":
+          msg = "Password is too weak.";
+          break;
+        case "invalid-email":
+          msg = "Invalid email address.";
+          break;
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -111,6 +121,15 @@ class _SignupScreenState extends State<SignupScreen> {
           .toList(),
       onChanged: (v) => setState(() => selectedCurrency = v!),
     );
+  }
+
+  @override
+  void dispose() {
+    nameCtrl.dispose();
+    emailCtrl.dispose();
+    passCtrl.dispose();
+    incomeCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -168,9 +187,12 @@ class _SignupScreenState extends State<SignupScreen> {
                 const SizedBox(height: 25),
                 ElevatedButton(
                   onPressed: loading ? null : _handleSignup,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                  ),
                   child: loading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text("Create Account"),
+                      : const Text("Create Account", style: TextStyle(fontSize: 16)),
                 ),
                 TextButton(
                   onPressed: () => Navigator.pushReplacementNamed(context, "/login"),

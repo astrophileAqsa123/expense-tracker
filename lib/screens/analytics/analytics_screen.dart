@@ -1,122 +1,59 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../provider/analytic_provider.dart';
 
-// ------- Theme Colors -------
-const Color kPrimaryColor = Color(0xFF6C63FF);
-const Color kBackgroundColor = Color(0xFFF5F7FA);
-const Color kTextColor = Color(0xFF2D3748);
-const Color kIncomeColor = Color(0xFF4CAF50);
-const Color kExpenseColor = Color(0xFFE53935);
-const Color kCardColor = Colors.white;
-
-class AnalyticsScreen extends StatefulWidget {
+class AnalyticsScreen extends StatelessWidget {
   const AnalyticsScreen({super.key});
 
   @override
-  State<AnalyticsScreen> createState() => _AnalyticsScreenState();
-}
-
-class _AnalyticsScreenState extends State<AnalyticsScreen> {
-  bool loading = true;
-  List<QueryDocumentSnapshot> transactions = [];
-
-  double totalIncome = 0;
-  double totalExpense = 0;
-  Map<String, double> categoryTotals = {};
-  Map<int, double> dailyTotals = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _loadAnalytics();
-  }
-
-  Future<void> _loadAnalytics() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final uid = user.uid;
-
-    final snapshot = await FirebaseFirestore.instance
-        .collection("users")
-        .doc(uid)
-        .collection("transactions")
-        .orderBy("date", descending: false)
-        .get();
-
-    transactions = snapshot.docs;
-
-    totalIncome = 0;
-    totalExpense = 0;
-    categoryTotals = {};
-    dailyTotals = {};
-
-    for (var doc in transactions) {
-      final data = doc.data() as Map<String, dynamic>;
-      final amount = (data["amount"] ?? 0).toDouble();
-      final type = data["type"];
-      final category = data["category"];
-      final date = (data["date"] as Timestamp).toDate();
-      final day = date.day;
-
-      // Calculate totals
-      if (type == "income") {
-        totalIncome += amount;
-      } else {
-        totalExpense += amount;
-      }
-
-      // Category totals
-      categoryTotals[category] = (categoryTotals[category] ?? 0) + amount;
-
-      // Daily totals (for chart)
-      dailyTotals[day] = (dailyTotals[day] ?? 0) + (type == "expense" ? amount : 0);
-    }
-
-    setState(() => loading = false);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kBackgroundColor,
-      appBar: AppBar(
-        title: const Text("Analytics", style: TextStyle(color: Colors.white)),
-        backgroundColor: kPrimaryColor,
-      ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator(color: kPrimaryColor))
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildSummaryCards(),
+    return Consumer<AnalyticProvider>(
+      builder: (context, txProvider, _) {
+        if (txProvider.loading) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-                const SizedBox(height: 20),
+        if (txProvider.errorMessage != null) {
+          return Scaffold(
+            appBar: AppBar(title: const Text("Analytics")),
+            body: Center(child: Text(txProvider.errorMessage!)),
+          );
+        }
 
-                _buildSectionTitle("Expense by Category"),
-                _buildCategoryPieChart(),
+        final totalIncome = txProvider.totalIncome;
+        final totalExpense = txProvider.totalExpense;
+        final savings = totalIncome - totalExpense;
+        final categoryTotals = txProvider.categoryTotals;
+        final dailyTotals = txProvider.dailyTotals;
 
-                const SizedBox(height: 30),
-
-                _buildSectionTitle("Daily Expense Chart"),
-                _buildDailyBarChart(),
-              ],
-            ),
+        return Scaffold(
+          appBar: AppBar(title: const Text("Analytics")),
+          body: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _buildSummaryCards(totalIncome, totalExpense, savings),
+              const SizedBox(height: 20),
+              _buildSectionTitle("Expense by Category"),
+              _buildCategoryPieChart(categoryTotals),
+              const SizedBox(height: 30),
+              _buildSectionTitle("Daily Expense Chart"),
+              _buildDailyBarChart(dailyTotals),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  // SUMMARY CARDS ---------------------------------
-  Widget _buildSummaryCards() {
-    final savings = totalIncome - totalExpense;
-
+  Widget _buildSummaryCards(double income, double expense, double savings) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _summaryCard("Income", totalIncome, kIncomeColor),
-        _summaryCard("Expense", totalExpense, kExpenseColor),
-        _summaryCard("Savings", savings, kPrimaryColor),
+        _summaryCard("Income", income, Colors.green),
+        _summaryCard("Expense", expense, Colors.red),
+        _summaryCard("Savings", savings, Colors.blue),
       ],
     );
   }
@@ -127,24 +64,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 5),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: kCardColor,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 6)
-          ],
+          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 6)],
         ),
         child: Column(
           children: [
-            Text(title,
-                style: const TextStyle(fontSize: 14, color: kTextColor)),
+            Text(title, style: const TextStyle(fontSize: 14, color: Colors.black)),
             const SizedBox(height: 6),
             Text(
               amount.toStringAsFixed(2),
-              style: TextStyle(
-                fontSize: 18,
-                color: color,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, color: color, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -152,28 +82,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  // SECTION TITLE ---------------------------------
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: kTextColor,
-        ),
-      ),
+      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
     );
   }
 
-  // CATEGORY PIE CHART -----------------------------
-  Widget _buildCategoryPieChart() {
-    if (categoryTotals.isEmpty) {
-      return const Center(child: Text("No expense data."));
-    }
+  Widget _buildCategoryPieChart(Map<String, double> data) {
+    if (data.isEmpty) return const Center(child: Text("No expense data."));
 
-    final sections = categoryTotals.entries.map((entry) {
+    final sections = data.entries.map((entry) {
       return PieChartSectionData(
         value: entry.value,
         title: entry.key,
@@ -184,10 +103,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     return Container(
       height: 250,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: kCardColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
       child: PieChart(
         PieChartData(
           sections: sections,
@@ -198,32 +114,22 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  // DAILY BAR CHART --------------------------------
-  Widget _buildDailyBarChart() {
-    if (dailyTotals.isEmpty) {
-      return const Center(child: Text("No expense data."));
-    }
+  Widget _buildDailyBarChart(Map<int, double> data) {
+    if (data.isEmpty) return const Center(child: Text("No expense data."));
 
     return Container(
       height: 280,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: kCardColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
       child: BarChart(
         BarChartData(
           gridData: FlGridData(show: false),
           borderData: FlBorderData(show: false),
-          barGroups: dailyTotals.entries.map((e) {
+          barGroups: data.entries.map((e) {
             return BarChartGroupData(
               x: e.key,
               barRods: [
-                BarChartRodData(
-                  toY: e.value,
-                  width: 14,
-                  color: kExpenseColor,
-                ),
+                BarChartRodData(toY: e.value, width: 14, color: Colors.red),
               ],
             );
           }).toList(),
@@ -232,8 +138,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                getTitlesWidget: (v, meta) => Text("${v.toInt()}",
-                    style: const TextStyle(fontSize: 10)),
+                getTitlesWidget: (v, meta) =>
+                    Text("${v.toInt()}", style: const TextStyle(fontSize: 10)),
               ),
             ),
           ),

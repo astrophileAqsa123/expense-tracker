@@ -5,7 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../theme/theme_provider.dart';
 import '../budget/advanced_budget_screen.dart';
 import '../setting/profile_edit_screen.dart';
-import '../../services/auth_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -30,8 +29,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         title: const Text("Settings"),
         centerTitle: true,
+        backgroundColor: Colors.deepPurple,
       ),
       body: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 10),
         children: [
           _header("GENERAL"),
 
@@ -52,8 +53,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             trailing: DropdownButton<String>(
               value: selectedLanguage,
               onChanged: (val) => setState(() => selectedLanguage = val!),
-              items: languages.map((e) =>
-                  DropdownMenuItem(value: e, child: Text(e))).toList(),
+              items: languages
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .toList(),
             ),
           ),
 
@@ -64,15 +66,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             trailing: DropdownButton<String>(
               value: selectedCurrency,
               onChanged: (val) => setState(() => selectedCurrency = val!),
-              items: currencies.map((e) =>
-                  DropdownMenuItem(value: e, child: Text(e))).toList(),
+              items: currencies
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .toList(),
             ),
           ),
 
           _header("APPEARANCE"),
 
           SwitchListTile(
-            secondary: const Icon(Icons.dark_mode),
+            secondary: const Icon(Icons.dark_mode, color: Colors.deepPurple),
             title: const Text("Dark Mode"),
             value: themeProvider.themeMode == ThemeMode.dark,
             onChanged: (val) => themeProvider.toggleTheme(val),
@@ -96,7 +99,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: "Privacy & Security",
             subtitle: "App lock, permissions",
             icon: Icons.lock_outline,
-            onTap: () {},
+            onTap: () {}, // Implement security settings later
           ),
 
           _header("ABOUT"),
@@ -104,6 +107,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _tile(
             title: "About App",
             icon: Icons.info_outline,
+            onTap: () {}, // Could navigate to About page
           ),
 
           const SizedBox(height: 20),
@@ -118,7 +122,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               onPressed: () async {
                 await FirebaseAuth.instance.signOut();
-                Navigator.pushReplacementNamed(context, "/login");
+                if (mounted) {
+                  Navigator.pushReplacementNamed(context, "/login");
+                }
               },
               child: const Text("Logout"),
             ),
@@ -130,13 +136,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // ------------------- Helper Widgets -------------------
   Widget _header(String text) => Padding(
-    padding: const EdgeInsets.all(12),
-    child: Text(
-      text,
-      style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
-    ),
-  );
+        padding: const EdgeInsets.all(12),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.grey,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
 
   Widget _tile({
     required IconData icon,

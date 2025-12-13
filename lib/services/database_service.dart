@@ -1,102 +1,114 @@
-import "package:expense_tracker/models/budget_model.dart";
-import 'package:expense_tracker/models/transaction_model.dart'; 
-import 'package:expense_tracker/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:expense_tracker/models/budget_model.dart';
+import 'package:expense_tracker/models/transaction_model.dart';
+import 'package:expense_tracker/models/user_model.dart';
 
 class DatabaseService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseFirestore _db;
   final String uid;
 
-  DatabaseService(this.uid);
+  DatabaseService({
+    required this.uid,
+    FirebaseFirestore? firestore,
+  }) : _db = firestore ?? FirebaseFirestore.instance;
 
-  /// Reference to the user's document
-  DocumentReference get userDoc => _db.collection('users').doc(uid);
+  /// User document reference
+  DocumentReference<Map<String, dynamic>> get userDoc =>
+      _db.collection('users').doc(uid);
 
-  /// Reference to the user's transactions collection
-  CollectionReference get txCol => userDoc.collection('transactions');
+  /// Transactions collection reference
+  CollectionReference<Map<String, dynamic>> get txCol =>
+      userDoc.collection('transactions');
 
-  /// Save or update user profile
-  Future<void> saveUser(UserModel user) async {
-    await userDoc.set(user.toMap());
+  // ---------------- USER ----------------
+
+  /// Save or update user profile (MERGE to avoid overwriting)
+  Future<void> saveUser(UserModel user) {
+    return userDoc.set(user.toMap(), SetOptions(merge: true));
   }
 
-  /// Update budget inside user profile
-  Future<void> updateBudget(BudgetModel budget) async {
-    await userDoc.update({'budget': budget.toMap()});
+  /// Fetch user profile
+  Future<UserModel?> getUserProfile() async {
+    final snap = await userDoc.get();
+    if (!snap.exists || snap.data() == null) return null;
+    return UserModel.fromMap(snap.id, snap.data()!);
   }
 
-  /// Add a transaction (expense or income)
-  Future<void> addTransaction(TransactionModel tx) async {
-    await txCol.add(tx.toMap());
+  // ---------------- BUDGET ----------------
+
+  /// Update budget
+  Future<void> updateBudget(BudgetModel budget) {
+    return userDoc.update({'budget': budget.toMap()});
   }
 
-  /// Edit a transaction by document ID
-  Future<void> editTransaction(String id, TransactionModel tx) async {
-    await txCol.doc(id).update(tx.toMap());
+  // ---------------- TRANSACTIONS ----------------
+
+  /// Add transaction
+  Future<void> addTransaction(TransactionModel tx) {
+    return txCol.add(tx.toMap());
   }
 
-  /// Delete a transaction by document ID
-  Future<void> deleteTransaction(String id) async {
-    await txCol.doc(id).delete();
+  /// Update transaction
+  Future<void> editTransaction(String id, TransactionModel tx) {
+    return txCol.doc(id).update(tx.toMap());
   }
 
-  /// Stream all transactions as TransactionModel list
-  Stream<List<TransactionModel>> get transactions {
-    return txCol.orderBy('date', descending: true).snapshots().map(
-      (snapshot) {
-        return snapshot.docs
-            .map((doc) {
-              final data = doc.data()! as Map<String, dynamic>;
-              return TransactionModel.fromMap(doc.id, data);
-            })
-            .toList();
-      },
-    );
+  /// Delete transaction
+  Future<void> deleteTransaction(String id) {
+    return txCol.doc(id).delete();
   }
 
-  /// Get transactions filtered by category
-  Stream<List<TransactionModel>> transactionsByCategory(String category) {
+  /// 🔥 Stream all transactions (REAL-TIME, FAST)
+  Stream<List<TransactionModel>> streamTransactions() {
+    return txCol
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map(_mapTxSnapshot);
+  }
+
+  /// 🔥 Stream by category
+  Stream<List<TransactionModel>> streamTransactionsByCategory(
+      String category) {
     return txCol
         .where('category', isEqualTo: category)
         .orderBy('date', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) {
-              final data = doc.data()! as Map<String, dynamic>;
-              return TransactionModel.fromMap(doc.id, data);
-            })
-            .toList());
+        .map(_mapTxSnapshot);
   }
 
-  /// Get transactions filtered by date range
-  Future<List<TransactionModel>> transactionsByDateRange(
-      DateTime start, DateTime end) async {
-    final snapshot = await txCol
-        .where('date', isGreaterThanOrEqualTo: start)
-        .where('date', isLessThanOrEqualTo: end)
+  /// 🔥 One-time fetch by date range (reports)
+  Future<List<TransactionModel>> fetchTransactionsByDateRange(
+    DateTime start,
+    DateTime end,
+  ) async {
+    final snap = await txCol
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
         .get();
 
-    return snapshot.docs.map((doc) {
-      final data = doc.data()! as Map<String, dynamic>;
-      return TransactionModel.fromMap(doc.id, data);
-    }).toList();
+    return snap.docs.map(_mapTxDoc).toList();
   }
 
-  /// Calculate total amount for a type (income/expense)
+  /// ❌ OLD: Looping client-side totals (slow)
+  /// ✅ NEW: Use cached stream or cloud function later
   Future<double> totalByType(String type) async {
-    final snapshot = await txCol.where('type', isEqualTo: type).get();
-    double total = 0;
-    for (var doc in snapshot.docs) {
-      final data = doc.data()! as Map<String, dynamic>;
-      total += (data['amount'] ?? 0).toDouble();
-    }
-    return total;
+    final snap = await txCol.where('type', isEqualTo: type).get();
+
+    return snap.docs.fold<double>(
+      0,
+      (sum, doc) => sum + (doc.data()['amount'] as num? ?? 0).toDouble(),
+    );
   }
 
-  /// Get user profile as UserModel
-  Future<UserModel> getUserProfile() async {
-    final docSnap = await userDoc.get();
-    final data = docSnap.data()! as Map<String, dynamic>;
-    return UserModel.fromMap(docSnap.id, data);
+  // ---------------- HELPERS ----------------
+
+  List<TransactionModel> _mapTxSnapshot(
+      QuerySnapshot<Map<String, dynamic>> snapshot) {
+    return snapshot.docs.map(_mapTxDoc).toList();
+  }
+
+  TransactionModel _mapTxDoc(
+      QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+    return TransactionModel.fromMap(doc.id, doc.data());
   }
 }

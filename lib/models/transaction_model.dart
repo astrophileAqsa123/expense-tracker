@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 class TransactionModel {
   final String id;
   final double amount;
@@ -17,13 +18,35 @@ class TransactionModel {
   });
 
   factory TransactionModel.fromMap(String id, Map<String, dynamic> data) {
+    final rawAmount = data['amount'];
+    final rawType = data['type'];
+    final rawCategory = data['category'];
+    final rawDescription = data['description'];
+    final rawDate = data['date'];
+
+    // ✅ SAFE amount parsing
+    final amount = (rawAmount is num) ? rawAmount.toDouble() : 0.0;
+
+    // ✅ SAFE date parsing (Timestamp / DateTime / String / null)
+    DateTime parsedDate = DateTime.now();
+    if (rawDate is Timestamp) {
+      parsedDate = rawDate.toDate();
+    } else if (rawDate is DateTime) {
+      parsedDate = rawDate;
+    } else if (rawDate is String) {
+      parsedDate = DateTime.tryParse(rawDate) ?? DateTime.now();
+    } else {
+      // null or unknown -> fallback
+      parsedDate = DateTime.now();
+    }
+
     return TransactionModel(
       id: id,
-      amount: (data['amount'] ?? 0).toDouble(),
-      type: data['type'],
-      category: data['category'],
-      description: data['description'],
-      date: (data['date'] as Timestamp).toDate(),
+      type: (rawType ?? 'expense').toString(),
+      category: (rawCategory ?? 'Other').toString(),
+      description: (rawDescription ?? 'Transaction').toString(),
+      amount: amount,
+      date: parsedDate,
     );
   }
 
@@ -33,7 +56,8 @@ class TransactionModel {
       'type': type,
       'category': category,
       'description': description,
-      'date': date,
+      // ✅ store as Timestamp for Firestore consistency
+      'date': Timestamp.fromDate(date),
     };
   }
 }

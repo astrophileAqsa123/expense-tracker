@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// --- Theme Colors ---
 const Color kPrimaryColor = Color(0xFF6C63FF);
-const Color kPrimaryDarkColor = Color(0xFF5A52D5); 
-const Color kBackgroundColor = Color(0xFFF5F7FA); 
+const Color kPrimaryDarkColor = Color(0xFF5A52D5);
+const Color kBackgroundColor = Color(0xFFF5F7FA);
 const Color kTextColor = Color(0xFF2D3748);
-const Color kSuccessColor = Color(0xFF4CAF50); 
+const Color kSuccessColor = Color(0xFF4CAF50);
 const Color kErrorColor = Color(0xFFF44336);
 
 class AddIncomeScreen extends StatefulWidget {
@@ -38,33 +39,33 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
     setState(() => loading = true);
 
     final user = FirebaseAuth.instance.currentUser;
-
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("User not logged in")),
       );
+      setState(() => loading = false);
       return;
     }
 
-    String uid = user.uid;
-    double amount = double.parse(amountCtrl.text.trim());
+    final uid = user.uid;
+    final amount = double.parse(amountCtrl.text.trim());
 
     try {
       final userDoc = FirebaseFirestore.instance.collection("users").doc(uid);
 
-      // Ensure balance map exists (Good practice!)
-      DocumentSnapshot snap = await userDoc.get();
+      // Ensure balance exists
+      final snap = await userDoc.get();
       if (!snap.exists || !(snap.data() as Map<String, dynamic>).containsKey('balance')) {
         await userDoc.set({
           "balance": {
             "totalBalance": 0.0,
             "monthlyIncome": 0.0,
-            "monthlyExpense": 0.0, // Added for completeness
+            "monthlyExpense": 0.0,
           }
         }, SetOptions(merge: true));
       }
 
-      // 1️⃣ Save all incomes in:  users → uid → incomes
+      // Save income
       await userDoc.collection("incomes").add({
         "amount": amount,
         "category": selectedCategory,
@@ -72,7 +73,7 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
         "date": DateTime.now(),
       });
 
-      // 2️⃣ Also save inside transactions (dashboard history)
+      // Save transaction
       await userDoc.collection("transactions").add({
         "amount": amount,
         "type": "income",
@@ -81,7 +82,7 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
         "date": DateTime.now(),
       });
 
-      // 3️⃣ Update financial balance
+      // Update balance
       await userDoc.update({
         "balance.totalBalance": FieldValue.increment(amount),
         "balance.monthlyIncome": FieldValue.increment(amount),
@@ -94,16 +95,17 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
             backgroundColor: kSuccessColor,
           ),
         );
-
-        Navigator.pop(context);
+        Navigator.pop(context, true); // Refresh dashboard
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Failed to add income: $e"),
-          backgroundColor: kErrorColor,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to add income: $e"),
+            backgroundColor: kErrorColor,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -114,10 +116,10 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
     return Scaffold(
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
-        title: const Text("Add Income", 
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
+        title: const Text(
+          "Add Income",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        // --- Improved AppBar Theming (using dashboard gradient) ---
         backgroundColor: kPrimaryColor,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
@@ -130,7 +132,6 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
             ),
           ),
         ),
-        // --- End Improved AppBar Theming ---
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: kPrimaryColor))
@@ -140,12 +141,11 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                 key: _formKey,
                 child: ListView(
                   children: [
-                    // --- Styled Amount Input ---
-                    _buildStyledTextFormField(
+                    _buildTextField(
                       controller: amountCtrl,
-                      labelText: "Amount",
-                      prefixIcon: Icons.attach_money,
-                      keyboardType: TextInputType.number,
+                      label: "Amount",
+                      icon: Icons.attach_money,
+                      keyboard: TextInputType.number,
                       validator: (v) {
                         if (v == null || v.isEmpty) return "Enter amount";
                         if (double.tryParse(v) == null) return "Invalid number";
@@ -153,17 +153,13 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                       },
                     ),
                     const SizedBox(height: 15),
-
-                    // --- Styled Category Dropdown ---
                     DropdownButtonFormField<String>(
                       value: selectedCategory,
                       items: categories
-                          .map(
-                            (cat) => DropdownMenuItem(
-                              value: cat,
-                              child: Text(cat, style: const TextStyle(color: kTextColor)),
-                            ),
-                          )
+                          .map((cat) => DropdownMenuItem(
+                                value: cat,
+                                child: Text(cat, style: const TextStyle(color: kTextColor)),
+                              ))
                           .toList(),
                       onChanged: (v) => setState(() => selectedCategory = v!),
                       decoration: _inputDecoration.copyWith(
@@ -172,25 +168,21 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 15),
-
-                    // --- Styled Description Input ---
-                    _buildStyledTextFormField(
+                    _buildTextField(
                       controller: descriptionCtrl,
-                      labelText: "Description (optional)",
-                      prefixIcon: Icons.description,
+                      label: "Description (optional)",
+                      icon: Icons.description,
                     ),
                     const SizedBox(height: 30),
-
-                    // --- Styled Submit Button (Green for Income) ---
                     ElevatedButton(
                       onPressed: _addIncome,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: kSuccessColor, // Use success color for income
+                        backgroundColor: kSuccessColor,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        elevation: 5, // Add subtle shadow for lift
+                        elevation: 5,
                       ),
                       child: const Text(
                         "Add Income",
@@ -200,7 +192,7 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                           color: Colors.white,
                         ),
                       ),
-                    )
+                    ),
                   ],
                 ),
               ),
@@ -208,45 +200,39 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
     );
   }
 
-  // --- Reusable TextField Styling ---
   final InputDecoration _inputDecoration = const InputDecoration(
-    // Base border definition
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(12)),
-    ),
-    // Border when not focused
+    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.all(Radius.circular(12)),
-      borderSide: BorderSide(color: Color(0xFFE2E8F0), width: 1.5), // Light grey border
+      borderSide: BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
     ),
-    // Border when focused (Primary Color)
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.all(Radius.circular(12)),
       borderSide: BorderSide(color: kPrimaryColor, width: 2),
     ),
-    labelStyle: TextStyle(color: Color(0xFF718096)), // Subtle label color
+    labelStyle: TextStyle(color: Color(0xFF718096)),
     contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
     filled: true,
-    fillColor: Colors.white, // Ensures fields stand out against background
+    fillColor: Colors.white,
   );
 
-  Widget _buildStyledTextFormField({
+  Widget _buildTextField({
     required TextEditingController controller,
-    required String labelText,
-    required IconData prefixIcon,
-    TextInputType keyboardType = TextInputType.text,
+    required String label,
+    required IconData icon,
+    TextInputType keyboard = TextInputType.text,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
-      keyboardType: keyboardType,
+      keyboardType: keyboard,
       validator: validator,
       style: const TextStyle(color: kTextColor, fontSize: 16),
       decoration: _inputDecoration.copyWith(
-        labelText: labelText,
+        labelText: label,
         prefixIcon: Padding(
           padding: const EdgeInsets.only(left: 10.0, right: 8.0),
-          child: Icon(prefixIcon, color: kPrimaryColor, size: 24),
+          child: Icon(icon, color: kPrimaryColor, size: 24),
         ),
         prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
       ),

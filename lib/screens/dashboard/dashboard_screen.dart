@@ -3,14 +3,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+
 import '../add_transaction/add_income_screen.dart';
 import '../add_transaction/add_expense_screen.dart';
 import '../add_transaction/receipt_scanner.dart';
 import '../analytics/analytics_screen.dart';
 import '../setting/setting.dart';
 import '../budget/budget_setup_screen.dart';
-// 1. ADD NEW IMPORT FOR THE TRANSACTION SCREEN
-import '../transactions/transactions_screen.dart'; // <--- ASSUMED PATH
+import '../transactions/transactions_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -22,6 +22,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   String selectedPeriod = 'Month';
   bool isExpanded = false;
 
@@ -45,7 +46,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // 1. Main Scrollable Content
             CustomScrollView(
               slivers: [
                 _buildAppBar(userId),
@@ -62,7 +62,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       _buildCategoriesGrid(),
                       const SizedBox(height: 20),
                       _buildRecentTransactions(userId),
-                      // FINAL OVERFLOW FIX: Set to 160px to guarantee clearance
                       const SizedBox(height: 160),
                     ],
                   ),
@@ -70,7 +69,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
 
-            // 2. Expanded Speed Dial Overlay (Hidden when not expanded)
             Positioned(
               bottom: 80,
               right: 20,
@@ -85,7 +83,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
 
-            // 3. Bottom Navigation Bar (Fixed Position)
             Positioned(
               bottom: 0,
               left: 0,
@@ -93,7 +90,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: _buildBottomNavigationBar(),
             ),
 
-            // 4. Floating Action Button (Fixed Position)
             Positioned(
               bottom: 30,
               left: (MediaQuery.of(context).size.width / 2) - 30,
@@ -113,10 +109,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --- WIDGET DEFINITIONS ---
-
-// 1. UPDATED: _buildAppBar to stream profile photo and name
-Widget _buildAppBar(String userId) {
+  // ✅ UPDATED APP BAR: listens to Firestore user doc and updates photo instantly
+  Widget _buildAppBar(String userId) {
     return SliverAppBar(
       expandedHeight: 110,
       floating: false,
@@ -124,28 +118,48 @@ Widget _buildAppBar(String userId) {
       backgroundColor: const Color(0xFF6C63FF),
       elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
-        // StreamBuilder listens to the 'users' document for real-time profile updates
-        background: StreamBuilder<DocumentSnapshot>(
+        background: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
           stream: _firestore.collection('users').doc(userId).snapshots(),
           builder: (context, snapshot) {
             String displayName = "User";
             String? photoUrl;
 
-            // Check if data is available and exists
-            if (snapshot.hasData && snapshot.data!.exists) {
-              final userData = snapshot.data!.data() as Map<String, dynamic>?;
-              // Safely access fields. 'name' is the user name.
-              displayName = userData?['name'] ?? "User";
-              // 'profilePhoto' is the photo URL, updated from the Edit Profile screen.
-              photoUrl = userData?['profilePhoto']; 
-            }
-            
-            // Handle loading state
+            final authUser = _auth.currentUser;
+
             if (snapshot.connectionState == ConnectionState.waiting) {
-               // Optionally show a basic placeholder while loading
-               displayName = "Loading...";
+              displayName = "Loading...";
             }
 
+            if (snapshot.hasData && snapshot.data!.exists) {
+              final userData = snapshot.data!.data();
+
+              // Name field (your app stores it as 'name')
+              displayName =
+                  (userData?['name'] as String?) ??
+                  (authUser?.displayName ?? "User");
+
+              // ✅ Use 'photoUrl' from Firestore (recommended)
+              final String? dbPhotoUrl = userData?['photoUrl'] as String?;
+
+              // optional: cache buster
+              final photoUpdatedAt = userData?['photoUpdatedAt'];
+
+              if (dbPhotoUrl != null && dbPhotoUrl.isNotEmpty) {
+                photoUrl = dbPhotoUrl;
+
+                // If you store timestamp, add it to force refresh
+                if (photoUpdatedAt != null) {
+                  photoUrl = "$photoUrl?v=${photoUpdatedAt.toString()}";
+                }
+              } else {
+                // Fallback to FirebaseAuth photoURL if Firestore missing
+                photoUrl = authUser?.photoURL;
+              }
+            } else {
+              // fallback if user doc doesn't exist yet
+              displayName = authUser?.displayName ?? "User";
+              photoUrl = authUser?.photoURL;
+            }
 
             return Container(
               decoration: const BoxDecoration(
@@ -161,17 +175,15 @@ Widget _buildAppBar(String userId) {
                 children: [
                   Row(
                     children: [
-                      // PROFILE PHOTO LOGIC
                       CircleAvatar(
                         radius: 25,
-                        // Use NetworkImage if photoUrl is available and valid
-                        backgroundImage: (photoUrl != null && photoUrl.isNotEmpty) 
-                            ? NetworkImage(photoUrl) 
+                        backgroundImage:
+                            (photoUrl != null && photoUrl.isNotEmpty)
+                            ? NetworkImage(photoUrl)
                             : null,
                         backgroundColor: Colors.white24,
-                        // Fallback icon if no photoUrl
-                        child: (photoUrl == null || photoUrl.isEmpty) 
-                            ? const Icon(Icons.person, color: Colors.white) 
+                        child: (photoUrl == null || photoUrl.isEmpty)
+                            ? const Icon(Icons.person, color: Colors.white)
                             : null,
                       ),
                       const SizedBox(width: 9),
@@ -179,14 +191,30 @@ Widget _buildAppBar(String userId) {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text('Welcome back,', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                          // Display the fetched user name
-                          Text(displayName, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                          const Text(
+                            'Welcome back,',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
+                          Text(
+                            displayName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
                     ],
                   ),
-                  const Icon(Icons.notifications_outlined, color: Colors.white, size: 28),
+                  const Icon(
+                    Icons.notifications_outlined,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                 ],
               ),
             );
@@ -222,7 +250,6 @@ Widget _buildAppBar(String userId) {
         }
 
         if (!snapshot.hasData || snapshot.data?.data() == null) {
-          // Handles the "Balance Data Missing" scenario
           return _buildErrorCard(
             'Balance Data Missing',
             'Ensure a document exists at "users/{$userId}" and contains a "balance" map field.',
@@ -572,7 +599,6 @@ Widget _buildAppBar(String userId) {
           final data = doc.data() as Map<String, dynamic>;
           final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
           final category = data['category'] ?? 'Other';
-
           categoryTotals[category] = (categoryTotals[category] ?? 0) + amount;
         }
 
@@ -591,6 +617,7 @@ Widget _buildAppBar(String userId) {
           (sum, amount) => sum + amount,
         );
         int index = 0;
+
         categoryTotals.forEach((category, amount) {
           sections.add(
             PieChartSectionData(
@@ -664,6 +691,7 @@ Widget _buildAppBar(String userId) {
         'color': const Color(0xFF9E9E9E),
       },
     ];
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 18),
       child: Column(
@@ -691,9 +719,7 @@ Widget _buildAppBar(String userId) {
             itemBuilder: (context, index) {
               final category = categories[index];
               return GestureDetector(
-                onTap: () {
-                  // Navigate to category details
-                },
+                onTap: () {},
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -740,7 +766,6 @@ Widget _buildAppBar(String userId) {
     );
   }
 
-  // 2. UPDATED: _buildRecentTransactions to navigate to TransactionScreen on 'View All'
   Widget _buildRecentTransactions(String userId) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -760,7 +785,6 @@ Widget _buildAppBar(String userId) {
               ),
               TextButton(
                 onPressed: () {
-                  // Navigate to the TransactionScreen when 'View All' is clicked
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -804,6 +828,7 @@ Widget _buildAppBar(String userId) {
                   ),
                 );
               }
+
               return ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -837,6 +862,7 @@ Widget _buildAppBar(String userId) {
   ) {
     IconData icon;
     Color color;
+
     switch (category.toLowerCase()) {
       case 'food':
         icon = Icons.restaurant;
@@ -854,6 +880,7 @@ Widget _buildAppBar(String userId) {
         icon = Icons.category;
         color = const Color(0xFF9E9E9E);
     }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -924,7 +951,6 @@ Widget _buildAppBar(String userId) {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        // 🚀 ADD EXPENSE NAVIGATION
         _buildSpeedDialOption(
           Icons.add,
           'Add Expense',
@@ -937,7 +963,6 @@ Widget _buildAppBar(String userId) {
           },
         ),
         const SizedBox(height: 12),
-        // ⬆️ ADD INCOME NAVIGATION (Was already present)
         _buildSpeedDialOption(
           Icons.arrow_upward,
           'Add Income',
@@ -950,7 +975,6 @@ Widget _buildAppBar(String userId) {
           },
         ),
         const SizedBox(height: 12),
-        // 📸 SCAN RECEIPT NAVIGATION
         _buildSpeedDialOption(
           Icons.camera_alt,
           'Scan Receipt',
@@ -1003,13 +1027,11 @@ Widget _buildAppBar(String userId) {
           mini: true,
           backgroundColor: color,
           onPressed: () {
-            // Close the speed dial first
             if (isExpanded) {
               setState(() {
                 isExpanded = false;
               });
             }
-            // Execute the provided navigation function
             onTap?.call();
           },
           child: Icon(icon, size: 20),
@@ -1031,15 +1053,14 @@ Widget _buildAppBar(String userId) {
             IconButton(
               icon: const Icon(Icons.bar_chart),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AnalyticsScreen(),
-                  ),
-                );
+               Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
+                  );
+
               },
             ),
-            const SizedBox(width: 48), // Spacer for the FAB
+            const SizedBox(width: 48),
             IconButton(
               icon: const Icon(Icons.account_balance_wallet_outlined),
               onPressed: () {
@@ -1056,7 +1077,9 @@ Widget _buildAppBar(String userId) {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsScreen(),
+                  ),
                 );
               },
             ),
@@ -1066,18 +1089,3 @@ Widget _buildAppBar(String userId) {
     );
   }
 }
-
-// NOTE: You must create the TransactionScreen class for the 'View All'
-// functionality to work without errors.
-/*
-class TransactionScreen extends StatelessWidget {
-  const TransactionScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('All Transactions')),
-      body: const Center(child: Text('This is the dedicated Transaction Screen')),
-    );
-  }
-}
-*/

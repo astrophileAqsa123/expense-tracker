@@ -8,14 +8,10 @@ import 'edit_transaction_screen.dart';
 class TransactionDetailsScreen extends StatefulWidget {
   final String transactionId;
 
-  const TransactionDetailsScreen({
-    super.key,
-    required this.transactionId,
-  });
+  const TransactionDetailsScreen({super.key, required this.transactionId});
 
   @override
-  State<TransactionDetailsScreen> createState() =>
-      _TransactionDetailsScreenState();
+  State<TransactionDetailsScreen> createState() => _TransactionDetailsScreenState();
 }
 
 class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
@@ -36,6 +32,8 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return;
 
+    setState(() => loading = true);
+
     try {
       final doc = await _db
           .collection("users")
@@ -44,17 +42,11 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
           .doc(widget.transactionId)
           .get();
 
-      if (doc.exists && doc.data() != null) {
-        transactionData = doc.data();
-      } else {
-        transactionData = null;
-      }
-    } catch (e) {
+      transactionData = doc.exists ? doc.data() : null;
+    } catch (_) {
       transactionData = null;
-    }
-
-    if (mounted) {
-      setState(() => loading = false);
+    } finally {
+      if (mounted) setState(() => loading = false);
     }
   }
 
@@ -70,7 +62,7 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
         .doc(widget.transactionId)
         .delete();
 
-    if (mounted) Navigator.pop(context);
+    if (mounted) Navigator.pop(context, true); // Return true to refresh previous screen
   }
 
   void _confirmDelete() {
@@ -119,9 +111,8 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
 
     final data = transactionData!;
 
-    // SAFE DATA EXTRACTION
     final String title = data["title"]?.toString() ?? "Untitled";
-    final String amount = data["amount"]?.toString() ?? "0";
+    final double amount = (data["amount"] is num) ? (data["amount"] as num).toDouble() : 0.0;
     final String type = data["type"]?.toString() ?? "expense";
     final String category = data["category"]?.toString() ?? "No category";
     final String notes = data["notes"]?.toString() ?? "No notes";
@@ -137,15 +128,19 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => EditTransactionScreen(
                     transactionId: widget.transactionId,
                   ),
                 ),
-              ).then((_) => _loadTransaction());
+              );
+
+              if (result == true) {
+                _loadTransaction(); // Reload after edit
+              }
             },
           ),
           IconButton(
@@ -159,17 +154,12 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
         child: ListView(
           children: [
             _buildDetailTile("Title", title),
-            _buildDetailTile("Amount", "₹ $amount"),
-            _buildDetailTile(
-              "Type",
-              type == "expense" ? "Expense" : "Income",
-            ),
+            _buildDetailTile("Amount", "₹ ${amount.toStringAsFixed(2)}"),
+            _buildDetailTile("Type", type == "expense" ? "Expense" : "Income"),
             _buildDetailTile("Category", category),
             _buildDetailTile(
               "Date",
-              date != null
-                  ? DateFormat("yyyy-MM-dd").format(date)
-                  : "No date",
+              date != null ? DateFormat("yyyy-MM-dd").format(date) : "No date",
             ),
             _buildDetailTile("Notes", notes),
           ],
@@ -178,7 +168,7 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
     );
   }
 
-  // ---------------- TILE ----------------
+  // ---------------- DETAIL TILE ----------------
   Widget _buildDetailTile(String label, String value) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

@@ -60,7 +60,7 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content:
-                  Text("Expense of ${amount.toStringAsFixed(2)} added!"),
+                  Text("Expense of ₹${amount.toStringAsFixed(2)} added!"),
               backgroundColor: kSuccessColor,
             ),
           );
@@ -92,64 +92,55 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
     }
   }
 
-  // -----------------------------
-  // Core: treat ',' as thousands separator (remove it)
-  //        and '.' as decimal separator (keep it)
-  // -----------------------------
+  // -------------------------
+  // Extract total amount with comma and decimal handling
+  // -------------------------
   double? _extractTotalAmount(String text) {
     if (text.trim().isEmpty) return null;
 
-    // 1) Keep original lines for keyword detection
     final lines = text.split(RegExp(r'\r?\n'));
+    final numberRegex =
+        RegExp(r'\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?');
 
-    // 2) Build a "normalized" version for number extraction:
-    //    - Remove spaces inside numbers
-    //    - Remove ALL commas (treat them as thousands separators)
-    //    - Keep dots (.) as decimal separators
-    String normalized = text.replaceAll(RegExp(r'\s+'), ' '); // collapse spaces
-    normalized = normalized.replaceAll(',', ''); // REMOVE commas (thousands separators)
-
-    // 3) Regex to find numbers with optional decimal part (dot decimal)
-    final numberRegex = RegExp(r'\d+(?:\.\d+)?');
-
-    // 4) Collect all parsed numbers
     List<double> parsedNumbers = [];
-    for (final match in numberRegex.allMatches(normalized)) {
-      final raw = match.group(0)!;
-      final parsed = double.tryParse(raw);
-      if (parsed != null) parsedNumbers.add(parsed);
+
+    for (final match in numberRegex.allMatches(text)) {
+      String raw = match.group(0)!;
+      raw = raw.replaceAll(',', ''); // remove thousand separators
+      final value = double.tryParse(raw);
+      if (value != null) parsedNumbers.add(value);
     }
 
     if (parsedNumbers.isEmpty) return null;
 
-    // 5) Priority: look for lines containing keywords (search lines reversed so bottom totals preferred)
-    final keywordRegex = RegExp(r'\b(total|amount due|amount|grand total|balance due|payable|total payable|net total)\b', caseSensitive: false);
+    // Keyword search for lines containing total
+    final keywordRegex = RegExp(
+      r'\b(total|amount due|amount|grand total|balance due|payable|total payable|net total)\b',
+      caseSensitive: false,
+    );
+
     for (final line in lines.reversed) {
       if (keywordRegex.hasMatch(line)) {
-        // Normalize this line same way: remove commas, collapse spaces
-        final lineNorm = line.replaceAll(RegExp(r'\s+'), ' ').replaceAll(',', '');
-        final m = numberRegex.allMatches(lineNorm).toList();
-        if (m.isNotEmpty) {
-          // Prefer the last numeric match in that line (commonly the total)
-          final last = m.last.group(0)!;
-          final parsed = double.tryParse(last);
-          if (parsed != null) return parsed;
+        final matches = numberRegex.allMatches(line);
+        if (matches.isNotEmpty) {
+          final last = matches.last.group(0)!.replaceAll(',', '');
+          final val = double.tryParse(last);
+          if (val != null) return val;
         }
       }
     }
 
-    // 6) Fallback: take the largest parsed number
+    // Fallback: largest number
     parsedNumbers.sort();
     return parsedNumbers.last;
   }
 
-  // Extract date from text (simple attempt)
+  // Extract date from text (simple heuristic)
   DateTime? _extractDate(String text) {
     final dateRegex = RegExp(r'(\d{1,4}[-/.]\d{1,2}[-/.]\d{2,4})');
     final match = dateRegex.firstMatch(text);
     if (match == null) return null;
     String dateStr = match.group(1)!.replaceAll('/', '-').replaceAll('.', '-');
-    // Try to normalize short years like 21 -> 2021
     final parts = dateStr.split('-');
     if (parts.length == 3 && parts[2].length == 2) {
       parts[2] = '20' + parts[2];
@@ -169,7 +160,6 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
     final uid = user.uid;
     final userDoc = FirebaseFirestore.instance.collection('users').doc(uid);
 
-    // 1) save to transactions
     await userDoc.collection('transactions').add({
       'type': 'expense',
       'amount': amount,
@@ -178,7 +168,6 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
       'date': Timestamp.fromDate(date),
     });
 
-    // 2) update balance fields (assumes balance.totalBalance and balance.monthlyExpense exist)
     await userDoc.update({
       'balance.totalBalance': FieldValue.increment(-amount),
       'balance.monthlyExpense': FieldValue.increment(amount),
@@ -206,38 +195,51 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: _image == null
-                  ? Icon(Icons.receipt_long, size: 100, color: kPrimaryColor.withOpacity(0.4))
+                  ? Icon(Icons.receipt_long,
+                      size: 100, color: kPrimaryColor.withOpacity(0.4))
                   : ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Image.file(_image!, fit: BoxFit.cover, width: double.infinity),
                     ),
             ),
             const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: _loading ? null : () => _pickImage(ImageSource.camera),
-              icon: const Icon(Icons.camera_alt),
-              label: const Text('Scan Using Camera'),
-              style: ElevatedButton.styleFrom(backgroundColor: kExpenseColor),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton.icon(
-              onPressed: _loading ? null : () => _pickImage(ImageSource.gallery),
-              icon: const Icon(Icons.photo_library),
-              label: const Text('Select from Gallery'),
-              style: ElevatedButton.styleFrom(backgroundColor: kExpenseColor),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _loading ? null : () => _pickImage(ImageSource.camera),
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Camera'),
+                    style: ElevatedButton.styleFrom(backgroundColor: kExpenseColor),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _loading ? null : () => _pickImage(ImageSource.gallery),
+                    icon: const Icon(Icons.photo_library),
+                    label: const Text('Gallery'),
+                    style: ElevatedButton.styleFrom(backgroundColor: kExpenseColor),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 20),
             if (_loading) const CircularProgressIndicator(color: kExpenseColor),
             const SizedBox(height: 12),
             const Align(
               alignment: Alignment.centerLeft,
-              child: Text('Extracted Text:', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: Text('Extracted Text:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 8),
             Expanded(
               child: Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 child: SingleChildScrollView(
                   child: Text(extractedText, style: const TextStyle(color: kTextColor)),
                 ),

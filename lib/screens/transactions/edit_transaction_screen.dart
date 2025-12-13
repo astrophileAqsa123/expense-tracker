@@ -6,14 +6,10 @@ import 'package:intl/intl.dart';
 class EditTransactionScreen extends StatefulWidget {
   final String transactionId;
 
-  const EditTransactionScreen({
-    super.key,
-    required this.transactionId,
-  });
+  const EditTransactionScreen({super.key, required this.transactionId});
 
   @override
-  State<EditTransactionScreen> createState() =>
-      _EditTransactionScreenState();
+  State<EditTransactionScreen> createState() => _EditTransactionScreenState();
 }
 
 class _EditTransactionScreenState extends State<EditTransactionScreen> {
@@ -22,10 +18,11 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // Controllers
-  final titleController = TextEditingController();
-  final amountController = TextEditingController();
-  final notesController = TextEditingController();
+  final TextEditingController titleController = TextEditingController();
+  final TextEditingController amountController = TextEditingController();
+  final TextEditingController notesController = TextEditingController();
 
+  // Transaction state
   String selectedType = "expense";
   String selectedCategory = "Food";
   DateTime selectedDate = DateTime.now();
@@ -55,13 +52,10 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
     _loadTransaction();
   }
 
-  // ---------------- LOAD ----------------
+  /// Load transaction details from Firestore
   Future<void> _loadTransaction() async {
     final uid = _auth.currentUser?.uid;
-    if (uid == null) {
-      setState(() => loading = false);
-      return;
-    }
+    if (uid == null) return setState(() => loading = false);
 
     try {
       final doc = await _db
@@ -71,26 +65,16 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
           .doc(widget.transactionId)
           .get();
 
-      if (!doc.exists || doc.data() == null) {
-        setState(() => loading = false);
-        return;
-      }
+      if (!doc.exists || doc.data() == null) return setState(() => loading = false);
 
       final data = doc.data()!;
 
-      // SAFE ASSIGNMENTS
       titleController.text = data["title"]?.toString() ?? "";
       amountController.text = data["amount"]?.toString() ?? "";
       notesController.text = data["notes"]?.toString() ?? "";
 
-      selectedType =
-          (data["type"] == "income" || data["type"] == "expense")
-              ? data["type"]
-              : "expense";
-
-      final validCategories =
-          selectedType == "expense" ? expenseCategories : incomeCategories;
-
+      selectedType = data["type"] == "income" ? "income" : "expense";
+      final validCategories = selectedType == "expense" ? expenseCategories : incomeCategories;
       selectedCategory = validCategories.contains(data["category"])
           ? data["category"]
           : validCategories.first;
@@ -98,14 +82,14 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
       if (data["date"] is Timestamp) {
         selectedDate = (data["date"] as Timestamp).toDate();
       }
-    } catch (e) {
-      // silently fail but exit loading
+    } catch (_) {
+      // Handle silently
+    } finally {
+      if (mounted) setState(() => loading = false);
     }
-
-    if (mounted) setState(() => loading = false);
   }
 
-  // ---------------- UPDATE ----------------
+  /// Update transaction in Firestore
   Future<void> _updateTransaction() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -126,10 +110,10 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
       "notes": notesController.text.trim(),
     });
 
-    if (mounted) Navigator.pop(context);
+    if (mounted) Navigator.pop(context, true); // Return true to refresh dashboard
   }
 
-  // ---------------- DELETE ----------------
+  /// Delete transaction
   Future<void> _deleteTransaction() async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return;
@@ -141,10 +125,10 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
         .doc(widget.transactionId)
         .delete();
 
-    if (mounted) Navigator.pop(context);
+    if (mounted) Navigator.pop(context, true);
   }
 
-  // ---------------- DATE PICKER ----------------
+  /// Show date picker
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -153,12 +137,9 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
       lastDate: DateTime(2100),
     );
 
-    if (picked != null) {
-      setState(() => selectedDate = picked);
-    }
+    if (picked != null) setState(() => selectedDate = picked);
   }
 
-  // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
     if (loading) {
@@ -167,13 +148,28 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
       );
     }
 
+    final categories = selectedType == "expense" ? expenseCategories : incomeCategories;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Edit Transaction"),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete, color: Colors.red),
-            onPressed: _deleteTransaction,
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("Confirm Delete"),
+                  content: const Text("Are you sure you want to delete this transaction?"),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+                    TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Delete")),
+                  ],
+                ),
+              );
+              if (confirm == true) _deleteTransaction();
+            },
           ),
         ],
       ),
@@ -186,17 +182,16 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
               TextFormField(
                 controller: titleController,
                 decoration: const InputDecoration(labelText: "Title"),
-                validator: (val) =>
-                    val == null || val.isEmpty ? "Enter title" : null,
+                validator: (val) => val == null || val.isEmpty ? "Enter title" : null,
               ),
               const SizedBox(height: 10),
               TextFormField(
                 controller: amountController,
-                keyboardType: TextInputType.number,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(labelText: "Amount"),
                 validator: (val) {
                   if (val == null || val.isEmpty) return "Enter amount";
-                  if (double.tryParse(val) == null) return "Invalid amount";
+                  if (double.tryParse(val.replaceAll(',', '')) == null) return "Invalid amount";
                   return null;
                 },
               ),
@@ -212,10 +207,7 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
                   if (val == null) return;
                   setState(() {
                     selectedType = val;
-                    selectedCategory = (val == "expense"
-                            ? expenseCategories
-                            : incomeCategories)
-                        .first;
+                    selectedCategory = (val == "expense" ? expenseCategories : incomeCategories).first;
                   });
                 },
               ),
@@ -223,23 +215,12 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
               DropdownButtonFormField<String>(
                 value: selectedCategory,
                 decoration: const InputDecoration(labelText: "Category"),
-                items: (selectedType == "expense"
-                        ? expenseCategories
-                        : incomeCategories)
-                    .map((c) =>
-                        DropdownMenuItem(value: c, child: Text(c)))
-                    .toList(),
-                onChanged: (val) {
-                  if (val != null) {
-                    setState(() => selectedCategory = val);
-                  }
-                },
+                items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                onChanged: (val) => setState(() => selectedCategory = val ?? categories.first),
               ),
               const SizedBox(height: 10),
               ListTile(
-                title: Text(
-                  "Date: ${DateFormat("yyyy-MM-dd").format(selectedDate)}",
-                ),
+                title: Text("Date: ${DateFormat("yyyy-MM-dd").format(selectedDate)}"),
                 trailing: const Icon(Icons.calendar_month),
                 onTap: _selectDate,
               ),

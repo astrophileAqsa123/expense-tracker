@@ -3,16 +3,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth;
+  final FirebaseFirestore _db;
 
-  // Current logged-in user
+  AuthService({FirebaseAuth? auth, FirebaseFirestore? firestore})
+      : _auth = auth ?? FirebaseAuth.instance,
+        _db = firestore ?? FirebaseFirestore.instance;
+
+  /// Current logged-in user
   User? get currentUser => _auth.currentUser;
 
-  // Stream for auth changes
+  /// Stream for auth state changes
   Stream<User?> get userChanges => _auth.authStateChanges();
 
-  // Register new user
+  // ------------------- REGISTER -------------------
   Future<User?> register({
     required String name,
     required String email,
@@ -28,6 +32,7 @@ class AuthService {
 
       final user = credential.user;
       if (user != null) {
+        // Create UserModel with safe defaults
         final userModel = UserModel(
           uid: user.uid,
           name: name,
@@ -39,17 +44,28 @@ class AuthService {
           createdAt: DateTime.now(),
         );
 
-        await _db.collection('users').doc(user.uid).set(userModel.toMap());
+        // 🔹 Use merge: true to avoid overwriting in rare cases
+        await _db
+            .collection('users')
+            .doc(user.uid)
+            .set(userModel.toMap(), SetOptions(merge: true));
       }
+
       return user;
     } on FirebaseAuthException catch (e) {
-      print("FirebaseAuthException: ${e.code} - ${e.message}");
-      rethrow;
+      // 🔹 Throw with meaningful message
+      throw FirebaseAuthException(
+        code: e.code,
+        message: e.message ?? 'Unknown registration error',
+      );
     }
   }
 
-  // Login user
-  Future<User?> login(String email, String password) async {
+  // ------------------- LOGIN -------------------
+  Future<User?> login({
+    required String email,
+    required String password,
+  }) async {
     try {
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
@@ -57,13 +73,18 @@ class AuthService {
       );
       return credential.user;
     } on FirebaseAuthException catch (e) {
-      print("Login FirebaseAuthException: ${e.code} - ${e.message}");
-      rethrow;
+      throw FirebaseAuthException(
+        code: e.code,
+        message: e.message ?? 'Unknown login error',
+      );
     }
   }
 
-  // Logout
-  Future<void> logout() async {
-    await _auth.signOut();
-  }
+  // ------------------- LOGOUT -------------------
+  Future<void> logout() async => await _auth.signOut();
+
+  // ------------------- HELPER -------------------
+
+  /// Safe check if user is logged in
+  bool get isLoggedIn => currentUser != null;
 }

@@ -32,25 +32,33 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
 
     final uid = user.uid;
 
-    final budgetDoc = await FirebaseFirestore.instance
-        .collection("users")
-        .doc(uid)
-        .collection("budget")
-        .doc("current_month")
-        .get();
+    try {
+      final budgetDoc = await FirebaseFirestore.instance
+          .collection("users")
+          .doc(uid)
+          .collection("budget")
+          .doc("current_month")
+          .get();
 
-    if (!budgetDoc.exists) return;
+      if (!budgetDoc.exists) {
+        setState(() => loading = false);
+        return;
+      }
 
-    categoryBudget =
-        Map<String, double>.from(budgetDoc["categoryBudget"] ?? {});
+      // Safe conversion
+      final catBudgetRaw = budgetDoc.data()?["categoryBudget"] ?? {};
+      categoryBudget = catBudgetRaw.map<String, double>((key, value) => MapEntry(key, (value as num).toDouble()));
 
-    totalBudget = budgetDoc["predictedBudget"] ?? 0;
-    totalSavingsRecommended = budgetDoc["recommendedSavings"] ?? 0;
+      totalBudget = (budgetDoc.data()?["predictedBudget"] ?? 0).toDouble();
+      totalSavingsRecommended = (budgetDoc.data()?["recommendedSavings"] ?? 0).toDouble();
 
-    await _loadSpendingData();
-    await _loadTrendData();
-
-    setState(() => loading = false);
+      await _loadSpendingData();
+      await _loadTrendData();
+    } catch (e) {
+      print("Error loading budget: $e");
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
   }
 
   Future<void> _loadSpendingData() async {
@@ -72,7 +80,6 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
       final data = doc.data();
       String category = data["category"] ?? "Others";
       double amount = (data["amount"] ?? 0).toDouble();
-
       categorySpent[category] = (categorySpent[category] ?? 0) + amount;
     }
   }
@@ -87,8 +94,16 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
     monthlyTrend = List.filled(6, 0);
 
     for (int i = 0; i < 6; i++) {
-      DateTime start = DateTime(now.year, now.month - i, 1);
-      DateTime end = DateTime(now.year, now.month - i + 1, 1);
+      int month = now.month - i;
+      int year = now.year;
+
+      if (month <= 0) {
+        month += 12;
+        year -= 1;
+      }
+
+      DateTime start = DateTime(year, month, 1);
+      DateTime end = (month < 12) ? DateTime(year, month + 1, 1) : DateTime(year + 1, 1, 1);
 
       final snapshot = await FirebaseFirestore.instance
           .collection("users")
@@ -109,24 +124,17 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
   }
 
   double _percentUsed(String category) {
-    if (!categorySpent.containsKey(category)) return 0;
-    if (!categoryBudget.containsKey(category)) return 0;
-
+    if (!categorySpent.containsKey(category) || !categoryBudget.containsKey(category)) return 0;
     return (categorySpent[category]! / categoryBudget[category]!) * 100;
   }
 
   String _generateRecommendation() {
-    double totalSpent =
-        categorySpent.values.fold(0, (a, b) => a + b);
+    double totalSpent = categorySpent.values.fold(0, (a, b) => a + b);
+    double savingRate = totalBudget > 0 ? totalSavingsRecommended / totalBudget * 100 : 0;
 
-    double savingRate = totalSavingsRecommended / totalBudget * 100;
-
-    // Overspending categories
     List<String> overspent = [];
     categoryBudget.forEach((cat, budget) {
-      if ((categorySpent[cat] ?? 0) > budget) {
-        overspent.add(cat);
-      }
+      if ((categorySpent[cat] ?? 0) > budget) overspent.add(cat);
     });
 
     if (overspent.isNotEmpty) {
@@ -134,13 +142,8 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
           "Reduce these next month or increase budget for higher priority categories.";
     }
 
-    if (savingRate < 15) {
-      return "Your savings rate is low (${savingRate.toStringAsFixed(1)}%). Try saving at least 20%.";
-    }
-
-    if (totalSpent < totalBudget * 0.7) {
-      return "Great job! You are spending less than expected this month.";
-    }
+    if (savingRate < 15) return "Your savings rate is low (${savingRate.toStringAsFixed(1)}%). Try saving at least 20%.";
+    if (totalSpent < totalBudget * 0.7) return "Great job! You are spending less than expected this month.";
 
     return "Budget seems stable. Keep tracking your expenses!";
   }
@@ -190,6 +193,10 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
   }
 
   Widget _buildTrendChart() {
+    if (monthlyTrend.isEmpty) return const SizedBox.shrink();
+
+    double maxY = monthlyTrend.isNotEmpty ? monthlyTrend.reduce((a, b) => a > b ? a : b) + 500 : 1000;
+
     return Card(
       elevation: 3,
       child: Padding(
@@ -201,7 +208,7 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
               minX: 0,
               maxX: 5,
               minY: 0,
-              maxY: monthlyTrend.reduce((a, b) => a > b ? a : b) + 500,
+              maxY: maxY,
               titlesData: FlTitlesData(
                 bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
@@ -254,7 +261,7 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
                 const SizedBox(height: 5),
                 Text(
                   "Used: ₹${categorySpent[category]?.toStringAsFixed(2) ?? "0"} / "
-                  "₹${categoryBudget[category]!.toStringAsFixed(2)} "
+                  "₹${categoryBudget[category]?.toStringAsFixed(2) ?? "0"} "
                   "(${percent.toStringAsFixed(1)}%)",
                   style: TextStyle(
                     color: warn ? Colors.red : Colors.black,

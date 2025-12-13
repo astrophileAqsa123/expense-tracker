@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/auth_service.dart';
 import '../dashboard/dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final auth = AuthService();
-
   final emailCtrl = TextEditingController();
   final passCtrl = TextEditingController();
 
@@ -25,14 +25,19 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => loading = true);
 
     try {
+      // 🔹 Use Provider instead of creating AuthService
+      final auth = context.read<AuthService>();
       final user = await auth.login(
-        emailCtrl.text.trim(),
-        passCtrl.text.trim(),
+        email: emailCtrl.text.trim(),
+        password: passCtrl.text.trim(),
       );
 
       if (user != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Login successful"), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text("Login successful"),
+            backgroundColor: Colors.green,
+          ),
         );
 
         Navigator.pushReplacement(
@@ -42,9 +47,17 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } on FirebaseAuthException catch (e) {
       String msg = "Login failed!";
-      if (e.code == "wrong-password") msg = "Incorrect password";
-      if (e.code == "user-not-found") msg = "User not found";
-      if (e.code == "invalid-email") msg = "Invalid email";
+      switch (e.code) {
+        case "wrong-password":
+          msg = "Incorrect password";
+          break;
+        case "user-not-found":
+          msg = "User not found";
+          break;
+        case "invalid-email":
+          msg = "Invalid email";
+          break;
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -76,8 +89,15 @@ class _LoginScreenState extends State<LoginScreen> {
           borderRadius: BorderRadius.all(Radius.circular(10)),
         ),
       ),
-      validator: (v) => v!.isEmpty ? "Required" : null,
+      validator: (v) => v == null || v.isEmpty ? "Required" : null,
     );
+  }
+
+  @override
+  void dispose() {
+    emailCtrl.dispose();
+    passCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -104,16 +124,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   prefixIcon: Icons.lock,
                   obscureText: _obscureText,
                   suffixIcon: IconButton(
-                    icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility),
+                    icon: Icon(
+                      _obscureText ? Icons.visibility_off : Icons.visibility,
+                    ),
                     onPressed: () => setState(() => _obscureText = !_obscureText),
                   ),
                 ),
                 const SizedBox(height: 25),
                 ElevatedButton(
                   onPressed: loading ? null : _handleLogin,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                  ),
                   child: loading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text("Login"),
+                      : const Text("Login", style: TextStyle(fontSize: 16)),
                 ),
                 TextButton(
                   onPressed: () => Navigator.pushReplacementNamed(context, "/signup"),

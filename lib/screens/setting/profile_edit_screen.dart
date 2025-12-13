@@ -18,12 +18,13 @@ class ProfileEditScreen extends StatefulWidget {
 class _ProfileEditScreenState extends State<ProfileEditScreen> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController bioController = TextEditingController();
-
   final UserService _userService = UserService();
 
   File? _selectedImage; // mobile/desktop
   Uint8List? _webImageBytes; // web
   String imageUrl = "";
+
+  bool loading = false;
 
   @override
   void initState() {
@@ -41,7 +42,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     }
   }
 
-  // Pick image from camera or gallery
   Future<void> pickImage(ImageSource source) async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: source, imageQuality: 80);
@@ -60,7 +60,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     }
   }
 
-  // Show bottom sheet for camera/gallery
   void showImageOptions() {
     showModalBottomSheet(
       context: context,
@@ -91,7 +90,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     );
   }
 
-  // Upload image to Firebase Storage
   Future<String> uploadImage() async {
     final storage = FirebaseStorage.instance;
     final ref = storage.ref("profile_photos/${DateTime.now().millisecondsSinceEpoch}.jpg");
@@ -101,44 +99,46 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     } else if (_selectedImage != null) {
       await ref.putFile(_selectedImage!);
     } else {
-      throw Exception("No image selected to upload");
+      return imageUrl; // no new image
     }
 
     return await ref.getDownloadURL();
   }
 
-  // Save profile data
   Future<void> saveProfile() async {
+    setState(() => loading = true);
+
     try {
       String finalImageUrl = imageUrl;
 
-      // Upload image if selected
+      // Upload new image if selected
       if ((kIsWeb && _webImageBytes != null) || (!kIsWeb && _selectedImage != null)) {
         finalImageUrl = await uploadImage();
-        print("Uploaded image URL: $finalImageUrl");
       }
 
-      // Update Firestore
       await _userService.updateUserProfile(
         name: nameController.text.trim(),
         bio: bioController.text.trim(),
         imageUrl: finalImageUrl,
       );
-      print("Firestore updated with image URL");
 
-      // Update local state
       setState(() {
         imageUrl = finalImageUrl;
         _selectedImage = null;
         _webImageBytes = null;
       });
 
-      Navigator.pop(context, true); // refresh dashboard
-    } catch (e) {
-      print("Error saving profile: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to update profile: $e")),
+        const SnackBar(content: Text("Profile updated successfully"), backgroundColor: Colors.green),
       );
+
+      Navigator.pop(context, true); // return true to indicate profile updated
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to update profile: $e"), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => loading = false);
     }
   }
 
@@ -156,68 +156,70 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text("Edit Profile")),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Stack(
-              alignment: Alignment.bottomRight,
-              children: [
-                GestureDetector(
-                  onTap: showImageOptions,
-                  child: CircleAvatar(
-                    radius: 55,
-                    backgroundColor: Colors.deepPurple,
-                    backgroundImage: avatarImage,
-                    child: avatarImage == null
-                        ? const Icon(Icons.person, size: 60, color: Colors.white)
-                        : null,
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      GestureDetector(
+                        onTap: showImageOptions,
+                        child: CircleAvatar(
+                          radius: 55,
+                          backgroundColor: Colors.deepPurple,
+                          backgroundImage: avatarImage,
+                          child: avatarImage == null
+                              ? const Icon(Icons.person, size: 60, color: Colors.white)
+                              : null,
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: showImageOptions,
+                          child: const CircleAvatar(
+                            radius: 18,
+                            backgroundColor: Colors.white,
+                            child: Icon(Icons.camera_alt, color: Colors.black),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: GestureDetector(
-                    onTap: showImageOptions,
-                    child: const CircleAvatar(
-                      radius: 18,
-                      backgroundColor: Colors.white,
-                      child: Icon(Icons.camera_alt, color: Colors.black),
+                  const SizedBox(height: 10),
+                  const Text(
+                    "Add Profile Photo",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: "Full Name",
+                      border: OutlineInputBorder(),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              "Add Profile Photo",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: "Full Name",
-                border: OutlineInputBorder(),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: bioController,
+                    decoration: const InputDecoration(
+                      labelText: "Profile Bio",
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: saveProfile,
+                    child: const Text("Save"),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: bioController,
-              decoration: const InputDecoration(
-                labelText: "Profile Bio",
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: saveProfile,
-              child: const Text("Save"),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

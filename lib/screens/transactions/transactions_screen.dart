@@ -13,9 +13,15 @@ class TransactionsScreen extends StatefulWidget {
 }
 
 class _TransactionsScreenState extends State<TransactionsScreen> {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+
   @override
   Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
+    if (uid == null) {
+      return const Scaffold(
+        body: Center(child: Text("User not logged in")),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text("All Transactions")),
@@ -31,7 +37,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          final transactions = snapshot.data?.docs ?? [];
+
+          if (transactions.isEmpty) {
             return const Center(
               child: Text(
                 "No transactions yet",
@@ -39,8 +47,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
               ),
             );
           }
-
-          final transactions = snapshot.data!.docs;
 
           return ListView.builder(
             padding: const EdgeInsets.all(12),
@@ -51,13 +57,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
               if (data == null) return const SizedBox.shrink();
 
-              // SAFE FIELD EXTRACTION
               final String title = data['title']?.toString() ?? 'Untitled';
-              final String category =
-                  data['category']?.toString() ?? 'No Category';
+              final String category = data['category']?.toString() ?? 'No Category';
               final String type = data['type']?.toString() ?? 'expense';
-              final String amount = data['amount']?.toString() ?? '0';
-              final Timestamp? date = data['date'];
+              final double amount = (data['amount'] is num) ? (data['amount'] as num).toDouble() : 0.0;
+              final Timestamp? date = data['date'] as Timestamp?;
               final bool isExpense = type == 'expense';
               final String id = doc.id;
 
@@ -67,21 +71,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 secondaryBackground: _deleteBackground(),
                 confirmDismiss: (direction) async {
                   if (direction == DismissDirection.startToEnd) {
-                    // SWIPE RIGHT → EDIT
-                    Future.microtask(() {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => EditTransactionScreen(
-                            transactionId: id,
-                          ),
-                        ),
-                      );
-                    });
+                    _editTransaction(id);
                     return false;
                   } else {
-                    // SWIPE LEFT → DELETE
-                    return await _confirmDelete(context, id, uid);
+                    return await _confirmDelete(context, id);
                   }
                 },
                 child: Card(
@@ -91,26 +84,14 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   ),
                   child: ListTile(
                     contentPadding: const EdgeInsets.all(12),
-                    onTap: () {
-                      // PASS FULL DATA TO DETAILS SCREEN
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => TransactionDetailsScreen(
-                            transactionId: id,
-                          ),
-                        ),
-                      );
-                    },
+                    onTap: () => _openDetails(id),
                     leading: CircleAvatar(
                       radius: 22,
                       backgroundColor: isExpense
                           ? Colors.redAccent.withOpacity(0.2)
                           : Colors.green.withOpacity(0.2),
                       child: Icon(
-                        isExpense
-                            ? Icons.arrow_downward
-                            : Icons.arrow_upward,
+                        isExpense ? Icons.arrow_downward : Icons.arrow_upward,
                         color: isExpense ? Colors.red : Colors.green,
                       ),
                     ),
@@ -121,11 +102,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    subtitle: Text(
-                      "$category • ${_safeDate(date)}",
-                    ),
+                    subtitle: Text("$category • ${_formatDate(date)}"),
                     trailing: Text(
-                      "${isExpense ? '-' : '+'} ₹$amount",
+                      "${isExpense ? '-' : '+'} ₹${amount.toStringAsFixed(2)}",
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -142,7 +121,28 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     );
   }
 
-  // EDIT BACKGROUND
+  // ---------------- HELPERS ----------------
+
+  void _editTransaction(String id) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditTransactionScreen(transactionId: id),
+      ),
+    ).then((_) {
+      setState(() {}); // Refresh after editing
+    });
+  }
+
+  void _openDetails(String id) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TransactionDetailsScreen(transactionId: id),
+      ),
+    ).then((_) => setState(() {}));
+  }
+
   Widget _editBackground() {
     return Container(
       color: Colors.blue,
@@ -152,7 +152,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     );
   }
 
-  // DELETE BACKGROUND
   Widget _deleteBackground() {
     return Container(
       color: Colors.red,
@@ -162,24 +161,19 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     );
   }
 
-  // DELETE CONFIRM
-  Future<bool> _confirmDelete(
-      BuildContext context, String id, String uid) async {
-    return await showDialog<bool>(
+  Future<bool> _confirmDelete(BuildContext context, String id) async {
+    return (await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
             title: const Text("Delete Transaction?"),
-            content:
-                const Text("Are you sure you want to delete this entry?"),
+            content: const Text("Are you sure you want to delete this entry?"),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
                 child: const Text("Cancel"),
               ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                ),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                 onPressed: () async {
                   await FirebaseFirestore.instance
                       .collection("users")
@@ -193,14 +187,14 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
               ),
             ],
           ),
-        ) ??
+        )) ??
         false;
   }
 
-  // SAFE DATE FORMAT
-  String _safeDate(Timestamp? date) {
-    if (date == null) return "No date";
-    final d = date.toDate();
+  String _formatDate(Timestamp? timestamp) {
+    if (timestamp == null) return "No date";
+    final d = timestamp.toDate();
     return "${d.day}/${d.month}/${d.year}";
   }
 }
+
