@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker/models/budget_model.dart';
 import 'package:expense_tracker/models/transaction_model.dart';
 import 'package:expense_tracker/models/user_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class DatabaseService {
   final FirebaseFirestore _db;
@@ -37,9 +38,15 @@ class DatabaseService {
   // ---------------- BUDGET ----------------
 
   /// Update budget
-  Future<void> updateBudget(BudgetModel budget) {
-    return userDoc.update({'budget': budget.toMap()});
-  }
+ Future<void> _updateBudget(String docId, Map<String, double> updatedBudget) async {
+  final userId = FirebaseAuth.instance.currentUser!.uid;
+  await FirebaseFirestore.instance
+      .collection('users')
+      .doc(userId)
+      .collection('budgets')
+      .doc(docId)
+      .update({'categoryBudget': updatedBudget, 'updatedAt': FieldValue.serverTimestamp()});
+}
 
   // ---------------- TRANSACTIONS ----------------
 
