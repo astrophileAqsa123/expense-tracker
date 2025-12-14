@@ -1,12 +1,9 @@
 import 'dart:io';
-import 'dart:typed_data';
-
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 
 import '../../services/user_service.dart';
+import '../../services/cloudinary_service.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   const ProfileEditScreen({Key? key}) : super(key: key);
@@ -20,8 +17,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   final TextEditingController bioController = TextEditingController();
   final UserService _userService = UserService();
 
-  File? _selectedImage; // mobile/desktop
-  Uint8List? _webImageBytes; // web
+  File? _selectedImage;
   String imageUrl = "";
 
   bool loading = false;
@@ -34,29 +30,22 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
   void loadUser() async {
     final data = await _userService.getUserData();
+    if (!mounted) return;
     if (data != null) {
-      nameController.text = data["name"] ?? "";
-      bioController.text = data["bio"] ?? "";
-      imageUrl = data["imageUrl"] ?? "";
+      nameController.text = (data["name"] ?? "").toString();
+      bioController.text = (data["bio"] ?? "").toString();
+      // Your Firestore field is imageUrl
+      imageUrl = (data["imageUrl"] ?? "").toString();
       setState(() {});
     }
   }
 
   Future<void> pickImage(ImageSource source) async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: source, imageQuality: 80);
-
+    final picked = await picker.pickImage(source: source, imageQuality: 70);
+    if (!mounted) return;
     if (picked != null) {
-      if (kIsWeb) {
-        final bytes = await picked.readAsBytes();
-        setState(() {
-          _webImageBytes = bytes;
-        });
-      } else {
-        setState(() {
-          _selectedImage = File(picked.path);
-        });
-      }
+      setState(() => _selectedImage = File(picked.path));
     }
   }
 
@@ -90,30 +79,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     );
   }
 
-  Future<String> uploadImage() async {
-    final storage = FirebaseStorage.instance;
-    final ref = storage.ref("profile_photos/${DateTime.now().millisecondsSinceEpoch}.jpg");
-
-    if (kIsWeb && _webImageBytes != null) {
-      await ref.putData(_webImageBytes!);
-    } else if (_selectedImage != null) {
-      await ref.putFile(_selectedImage!);
-    } else {
-      return imageUrl; // no new image
-    }
-
-    return await ref.getDownloadURL();
-  }
-
   Future<void> saveProfile() async {
     setState(() => loading = true);
 
     try {
       String finalImageUrl = imageUrl;
 
-      // Upload new image if selected
-      if ((kIsWeb && _webImageBytes != null) || (!kIsWeb && _selectedImage != null)) {
-        finalImageUrl = await uploadImage();
+      // ✅ Upload to Cloudinary if new image selected
+      if (_selectedImage != null) {
+        finalImageUrl = await CloudinaryService.uploadImage(_selectedImage!);
       }
 
       await _userService.updateUserProfile(
@@ -122,20 +96,28 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         imageUrl: finalImageUrl,
       );
 
+      if (!mounted) return;
+
       setState(() {
         imageUrl = finalImageUrl;
         _selectedImage = null;
-        _webImageBytes = null;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile updated successfully"), backgroundColor: Colors.green),
+        const SnackBar(
+          content: Text("Profile updated successfully"),
+          backgroundColor: Colors.green,
+        ),
       );
 
-      Navigator.pop(context, true); // return true to indicate profile updated
+      Navigator.pop(context, true);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to update profile: $e"), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text("Failed to update profile: $e"),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       if (mounted) setState(() => loading = false);
@@ -146,9 +128,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Widget build(BuildContext context) {
     ImageProvider? avatarImage;
 
-    if (kIsWeb && _webImageBytes != null) {
-      avatarImage = MemoryImage(_webImageBytes!);
-    } else if (_selectedImage != null) {
+    if (_selectedImage != null) {
       avatarImage = FileImage(_selectedImage!);
     } else if (imageUrl.isNotEmpty) {
       avatarImage = NetworkImage(imageUrl);
@@ -189,11 +169,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    "Add Profile Photo",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 20),
                   TextField(

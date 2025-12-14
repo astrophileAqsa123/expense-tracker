@@ -142,21 +142,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   (userData?['name'] as String?) ??
                   (authUser?.displayName ?? "User");
 
-              final String? dbPhotoUrl = userData?['photoUrl'] as String?;
+             final String? dbPhotoUrl = userData?['imageUrl'] as String?;
               final photoUpdatedAt = userData?['photoUpdatedAt'];
 
-              if (dbPhotoUrl != null && dbPhotoUrl.isNotEmpty) {
-                photoUrl = dbPhotoUrl;
-                if (photoUpdatedAt != null) {
-                  photoUrl = "$photoUrl?v=${photoUpdatedAt.toString()}";
-                }
-              } else {
-                photoUrl = authUser?.photoURL;
-              }
-            } else {
-              displayName = authUser?.displayName ?? "User";
-              photoUrl = authUser?.photoURL;
+                 if (dbPhotoUrl != null && dbPhotoUrl.isNotEmpty) {
+                 photoUrl = dbPhotoUrl;
+                 if (photoUpdatedAt != null) {
+    photoUrl = "$photoUrl?v=${photoUpdatedAt.toString()}";
+  }
+} else {
+  photoUrl = authUser?.photoURL;
+}
             }
+
 
             return Container(
               decoration: const BoxDecoration(

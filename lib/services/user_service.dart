@@ -26,11 +26,12 @@ class UserService {
     return docSnap.data();
   }
 
-  /// Update user profile (partial update using merge)
+  /// ✅ Update user profile (merge) + supports extraData
   Future<void> updateUserProfile({
     String? name,
     String? bio,
     String? imageUrl,
+    Map<String, dynamic>? extraData,
   }) async {
     final uid = _uid;
     if (uid == null) return;
@@ -39,7 +40,22 @@ class UserService {
 
     if (name != null) dataToUpdate['name'] = name;
     if (bio != null) dataToUpdate['bio'] = bio;
-    if (imageUrl != null) dataToUpdate['imageUrl'] = imageUrl;
+
+    if (imageUrl != null) {
+      // ✅ keep old key for compatibility
+      dataToUpdate['imageUrl'] = imageUrl;
+
+      // ✅ new key your dashboard uses
+      dataToUpdate['photoUrl'] = imageUrl;
+
+      // ✅ cache-buster for instant refresh
+      dataToUpdate['photoUpdatedAt'] = DateTime.now().millisecondsSinceEpoch;
+    }
+
+    // ✅ allow pushing any other fields too
+    if (extraData != null && extraData.isNotEmpty) {
+      dataToUpdate.addAll(extraData);
+    }
 
     if (dataToUpdate.isEmpty) return;
 
