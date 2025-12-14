@@ -82,9 +82,22 @@ class AuthService {
 
   // ------------------- LOGOUT -------------------
   Future<void> logout() async => await _auth.signOut();
+// ------------------- FORGOT PASSWORD -------------------
+  Future<void> sendPasswordReset(String email) async {
+  try {
+    await _auth.sendPasswordResetEmail(email: email);
+  } on FirebaseAuthException catch (e) {
+    throw FirebaseAuthException(
+      code: e.code,
+      message: e.message ?? 'Failed to send reset email',
+    );
+  }
+}
+
 
   // ------------------- HELPER -------------------
 
   /// Safe check if user is logged in
   bool get isLoggedIn => currentUser != null;
 }
+
