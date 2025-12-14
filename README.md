@@ -1,7 +1,6 @@
 # Expense Tracker Flutter App
 
-A Flutter-based Expense Tracker application with **Firebase backend** for Authentication and Firestore Cloud Database.  
-This project uses models, services, and Firebase integration to handle users, budgets, and transactions.
+Personal Expense Tracker designed to help users manage their finances intelligently and effectively. A Flutter-based Expense Tracker application with **Firebase backend** for Authentication and Firestore Cloud Database. This project uses models, services, and Firebase integration to handle users, budgets, and transactions.
 
 ---
 
