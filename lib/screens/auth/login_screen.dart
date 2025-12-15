@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/auth_service.dart';
 import '../dashboard/dashboard_screen.dart';
+import 'forgot_password_screen.dart';
 
 // --- COLOR PALETTE DEFINITION ---
 const Color kStormyTeal = Color(0xFF156064); 
@@ -256,13 +257,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: _showForgotPasswordDialog,
-                    child: const Text(
-                      "Forgot password?",
-                      style: TextStyle(color: _kAccentColor),
-                    ),
-                  ),
-                ),
+                onPressed: () {
+               Navigator.push(
+                context,
+             MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
+              );
+            },
+            child: const Text("Forgot password?"),
+          ),
+        ),
 
                 // Login Button (Using the specified #156064 color)
                 ElevatedButton(
