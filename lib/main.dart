@@ -27,6 +27,9 @@ import 'screens/analytics/analytics_screen.dart';
 import 'screens/add_transaction/add_expense_screen.dart';
 import 'screens/pdf/pdf.dart';
 
+import 'provider/currency_provider.dart';
+
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -43,14 +46,17 @@ class RootApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        Provider<AuthService>(create: (_) => AuthService()),
+     providers: [
+  ChangeNotifierProvider(create: (_) => ThemeProvider()),
+  ChangeNotifierProvider(create: (_) => CurrencyProvider()), // 👈 ADD THIS
 
-        // ✅ Single instance providers for whole app
-        ChangeNotifierProvider(create: (_) => TransactionProvider()),
-        ChangeNotifierProvider(create: (_) => AnalyticProvider()),
-      ],
+  Provider<AuthService>(create: (_) => AuthService()),
+
+  ChangeNotifierProvider(create: (_) => TransactionProvider()),
+  ChangeNotifierProvider(create: (_) => AnalyticProvider()),
+],
+
+      
       child: const MyApp(),
     );
   }

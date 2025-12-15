@@ -1,9 +1,23 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'your_budget_screen.dart'; // Import the YourBudgetsScreen
 
-enum BudgetGroup { needs, wants, savings }
+// --- THEME COLOR DEFINITIONS ---
+const Color kStormyTeal = Color(0xFF156064); 
+const Color kCoralGlow = Color(0xFFFB8F67); 
+const Color _kAccentColor = kStormyTeal; 
+const Color _kDangerColor = kCoralGlow;
+// -------------------------------
 
+/// ---------------- ENUM ----------------
+enum BudgetPeriodType {
+  monthly,
+  daily,
+  custom,
+}
+
+/// ---------------- SCREEN ----------------
 class BudgetSetupScreen extends StatefulWidget {
   const BudgetSetupScreen({super.key});
 
@@ -12,317 +26,406 @@ class BudgetSetupScreen extends StatefulWidget {
 }
 
 class _BudgetSetupScreenState extends State<BudgetSetupScreen> {
-  bool loading = true;
+  // ... (existing state variables)
+  bool loading = false;
+  bool isEditMode = false;
 
-  final TextEditingController incomeController = TextEditingController();
-  double monthlyIncome = 0;
+  BudgetPeriodType selectedPeriod = BudgetPeriodType.monthly;
+  int customDays = 7;
+  String? editingBudgetKey;
 
-  double needsBudget = 0;
-  double wantsBudget = 0;
-  double savingsBudget = 0;
+  final Map<String, TextEditingController> categoryControllers = {};
+  final Map<String, double> categoryBudget = {};
 
-  Map<String, double> categoryBudget = {};
-
-  final Map<String, Map<String, dynamic>> categoryMeta = {
-    "Food": {"group": BudgetGroup.needs, "priority": 5},
-    "Transport": {"group": BudgetGroup.needs, "priority": 4},
-    "Bills": {"group": BudgetGroup.needs, "priority": 6},
-    "Rent": {"group": BudgetGroup.needs, "priority": 7},
-    "Health": {"group": BudgetGroup.needs, "priority": 5},
-    "Education": {"group": BudgetGroup.needs, "priority": 3},
-    "Shopping": {"group": BudgetGroup.wants, "priority": 3},
-    "Entertainment": {"group": BudgetGroup.wants, "priority": 2},
-    "Other": {"group": BudgetGroup.wants, "priority": 1},
-  };
-
-  final Map<String, String> categoryPriorityLabel = {
-    "Rent": "High",
-    "Food": "High",
-    "Transport": "High",
-    "Bills": "High",
-    "Health": "Medium",
-    "Education": "Medium",
-    "Shopping": "Low",
-    "Entertainment": "Low",
-    "Other": "Low",
-  };
+  final List<String> categories = [
+    "Rent",
+    "Food",
+    "Transport",
+    "Bills",
+    "Health",
+    "Education",
+    "Shopping",
+    "Entertainment",
+    "Other",
+  ];
 
   @override
   void initState() {
     super.initState();
-    _loadIncomeAndBuildPlan();
+    for (final cat in categories) {
+      categoryControllers[cat] = TextEditingController();
+    }
   }
 
   @override
   void dispose() {
-    incomeController.dispose();
+    for (final c in categoryControllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
+  // ... (existing _generatePeriodKey, _loadExistingBudget, _saveBudget, _deleteBudget, _toast methods)
+  // ---------------- PERIOD KEY ----------------
+  String _generatePeriodKey(DateTime now) {
+    switch (selectedPeriod) {
+      case BudgetPeriodType.monthly:
+        return "${now.year}-${now.month.toString().padLeft(2, '0')}";
 
-  Future<void> _loadIncomeAndBuildPlan() async {
-    setState(() => loading = true);
+      case BudgetPeriodType.daily:
+        return "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      setState(() => loading = false);
-      return;
-    }
-
-    final uid = user.uid;
-
-    try {
-      final doc =
-          await FirebaseFirestore.instance.collection("users").doc(uid).get();
-      final data = doc.data() ?? {};
-
-      final directIncome = (data["income"] as num?)?.toDouble(); // ✅ stored by income/provider
-
-      final balance = data["balance"] as Map<String, dynamic>?;
-      final balanceIncome = (balance?["monthlyIncome"] as num?)?.toDouble();
-
-      final income = (directIncome != null && directIncome > 0)
-          ? directIncome
-          : (balanceIncome != null && balanceIncome > 0)
-              ? balanceIncome
-              : 0.0;
-
-      monthlyIncome = income;
-      incomeController.text =
-          monthlyIncome > 0 ? monthlyIncome.toStringAsFixed(0) : "";
-
-      if (monthlyIncome > 0) {
-        _buildPlanFromIncome(monthlyIncome);
-      }
-    } catch (_) {}
-
-    setState(() => loading = false);
-  }
-
-  void _buildPlanFromIncome(double income) {
-    monthlyIncome = income;
-
-    needsBudget = monthlyIncome * 0.50;
-    wantsBudget = monthlyIncome * 0.30;
-    savingsBudget = monthlyIncome * 0.20;
-
-    categoryBudget = {};
-    _distributeGroupBudget(BudgetGroup.needs, needsBudget);
-    _distributeGroupBudget(BudgetGroup.wants, wantsBudget);
-
-    for (final cat in categoryMeta.keys) {
-      categoryBudget[cat] = categoryBudget[cat] ?? 0.0;
-    }
-
-    setState(() {});
-  }
-
-  void _distributeGroupBudget(BudgetGroup group, double totalGroupBudget) {
-    final cats =
-        categoryMeta.entries.where((e) => e.value["group"] == group).toList();
-
-    final sumPriority = cats.fold<double>(
-      0,
-      (s, e) => s + (e.value["priority"] as int).toDouble(),
-    );
-
-    if (sumPriority == 0) return;
-
-    for (final e in cats) {
-      final p = (e.value["priority"] as int).toDouble();
-      categoryBudget[e.key] = totalGroupBudget * (p / sumPriority);
+      case BudgetPeriodType.custom:
+        return "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}_${customDays}days";
     }
   }
 
-  void _onCreatePlanPressed() {
-    final parsed = double.tryParse(incomeController.text.trim());
-    if (parsed == null || parsed <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a valid monthly income.")),
-      );
-      return;
-    }
-    _buildPlanFromIncome(parsed);
+// In budget_setup_screen.dart
+
+// ---------------- LOAD EXISTING ----------------
+// Renaming the parameter to docId to be clearer about its purpose
+Future<void> _loadExistingBudget(String docId) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+
+  final doc = await FirebaseFirestore.instance
+      .collection("users")
+      .doc(user.uid)
+      .collection("budgets")
+      // *** FIX 2: Use docId (which is the result from the previous screen) ***
+      .doc(docId) 
+      .get();
+      
+  // Add a check in case the document wasn't found
+  if (!doc.exists || doc.data() == null) {
+    _toast("Error: Budget document not found for editing.");
+    return;
   }
 
+  final data = doc.data()!;
+  
+  // Ensure all controllers are reset if we are loading a new budget key
+  for (final c in categoryControllers.values) {
+    c.text = "";
+  }
+
+  // ... (rest of the loading logic is fine) ...
+  final Map<String, dynamic> map =
+      Map<String, dynamic>.from(data['categoryBudget']);
+
+  for (final cat in categories) {
+    // This line should correctly populate the text field controllers
+    final amount = map[cat];
+    if (amount != null) {
+      // Use toStringAsFixed(0) or just toString() for clean display, 
+      // ensuring it's a string.
+      categoryControllers[cat]!.text = amount.toString();
+    } else {
+       categoryControllers[cat]!.text = "";
+    }
+  }
+
+  // Determine the period type from the loaded data for display purposes
+  BudgetPeriodType loadedPeriodType;
+  switch(data['periodType']) {
+    case 'monthly':
+      loadedPeriodType = BudgetPeriodType.monthly;
+      break;
+    case 'daily':
+      loadedPeriodType = BudgetPeriodType.daily;
+      break;
+    case 'custom':
+      loadedPeriodType = BudgetPeriodType.custom;
+      break;
+    default:
+      loadedPeriodType = BudgetPeriodType.monthly;
+  }
+
+
+  setState(() {
+    isEditMode = true;
+    // Set the editingBudgetKey to the docId for delete/save operations
+    editingBudgetKey = docId; 
+    selectedPeriod = loadedPeriodType; // Update the selector
+    customDays = data['periodDays'] ?? 7;
+  });
+
+  _toast("Editing budget: ${data['periodKey'] ?? docId}");
+}
+
+// And update the _viewOldBudgets function to pass the result correctly:
+// 🌟 NEW: Function to handle navigation to YourBudgetsScreen
+Future<void> _viewOldBudgets() async {
+  final result = await Navigator.push(
+   context,
+   MaterialPageRoute(builder: (context) => const YourBudgetsScreen()),
+  );
+  
+  // result is now the Firestore docId
+  if (result is String) {
+   // Do not update state here, _loadExistingBudget will call setState
+   await _loadExistingBudget(result); 
+  } 
+}
+  // ---------------- SAVE ----------------
   Future<void> _saveBudget() async {
+    categoryBudget.clear();
+
+    for (final cat in categories) {
+      final value =
+          double.tryParse(categoryControllers[cat]!.text.trim());
+      if (value != null && value > 0) {
+        categoryBudget[cat] = value;
+      }
+    }
+
+    if (categoryBudget.isEmpty) {
+      _toast("Please enter at least one category budget");
+      return;
+    }
+
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    if (monthlyIncome <= 0 || categoryBudget.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Create a plan first by entering income.")),
-      );
-      return;
+    final now = DateTime.now();
+    final periodKey = editingBudgetKey ?? _generatePeriodKey(now); // Use existing key if editing
+
+    final docRef = FirebaseFirestore.instance
+        .collection("users")
+        .doc(user.uid)
+        .collection("budgets")
+        .doc(periodKey);
+
+    if (!isEditMode) {
+      final exists = await docRef.get();
+      if (exists.exists) {
+        // Prevent accidental overwrite if not explicitly editing
+        _toast("Budget for this period already exists. Load it to edit.");
+        await _loadExistingBudget(periodKey);
+        return;
+      }
     }
 
-    final uid = user.uid;
-    final now = DateTime.now();
-    final monthKey = "${now.year}-${now.month.toString().padLeft(2, "0")}";
+    setState(() => loading = true);
 
-    await FirebaseFirestore.instance
-        .collection("users")
-        .doc(uid)
-        .collection("budget")
-        .doc("current_month")
-        .set({
-      "monthKey": monthKey,
-      "income": monthlyIncome,
-      "rule": {"needs": 0.50, "wants": 0.30, "savings": 0.20},
-      "groupBudgets": {
-        "needs": needsBudget,
-        "wants": wantsBudget,
-        "savings": savingsBudget,
-      },
+    await docRef.set({
+      "periodType": selectedPeriod.name,
+      "periodDays":
+          selectedPeriod == BudgetPeriodType.custom ? customDays : null,
+      "periodKey": periodKey,
       "categoryBudget": categoryBudget,
       "updatedAt": FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
-    // ✅ keep users/{uid}.income synced too
-    await FirebaseFirestore.instance.collection("users").doc(uid).set({
-      "income": monthlyIncome,
-    }, SetOptions(merge: true));
+    setState(() => loading = false);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Budget saved successfully!")),
-    );
+    _toast(isEditMode ? "Budget updated" : "Budget created");
+    Navigator.pop(context);
   }
+
+  // ---------------- DELETE ----------------
+  Future<void> _deleteBudget() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || editingBudgetKey == null) return;
+
+    await FirebaseFirestore.instance
+        .collection("users")
+        .doc(user.uid)
+        .collection("budgets")
+        .doc(editingBudgetKey!)
+        .delete();
+
+    _toast("Budget deleted");
+    Navigator.pop(context);
+  }
+  
+  // ---------------- UI ----------------
+  // 🌟 NEW: Function to handle navigation to YourBudgetsScreen
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // 🔹 THEMED APP BAR
       appBar: AppBar(
-        title: const Text("Smart Budget Setup"),
-        backgroundColor: Colors.deepPurple,
+        title: Text(
+          isEditMode ? "Edit Budget" : "Set Budget",
+          style: const TextStyle(color: Colors.white),
+        ),
+        backgroundColor: _kAccentColor, // Stormy Teal
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      backgroundColor: const Color(0xFFF5F7FA),
       body: loading
-          ? const Center(
-              child: CircularProgressIndicator(color: Colors.deepPurple),
-            )
+          ? const Center(child: CircularProgressIndicator(color: _kAccentColor))
           : ListView(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(16),
               children: [
-                _incomeCard(),
+                // 🌟 NEW: View Old Budgets Button
+                _buildViewOldBudgetsButton(),
                 const SizedBox(height: 16),
-                _groupRuleCard(),
-                const SizedBox(height: 20),
-                const Text(
-                  "Category-wise Recommended Budget (Priority Based)",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-                if (categoryBudget.isEmpty)
-                  const Text("Enter income and tap “Create Plan”."),
-                ...categoryBudget.entries.map(
-                  (e) => _buildCategoryTile(e.key, e.value),
-                ),
+                _buildPeriodSelector(),
                 const SizedBox(height: 24),
+                const Text(
+                  "Category Budgets",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...categories.map(_buildCategoryTile).toList(),
+                const SizedBox(height: 80),
               ],
             ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16),
-        child: ElevatedButton(
-          onPressed: _saveBudget,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.deepPurple,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-          ),
-          child: const Text("Save Budget", style: TextStyle(fontSize: 16)),
-        ),
-      ),
-    );
-  }
-
-  Widget _incomeCard() {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.all(18),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              "Monthly Income (Auto from Add Income)",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: incomeController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                prefixText: "Rs ",
-                hintText: "Enter monthly income",
-                border: OutlineInputBorder(),
+            // 🔹 THEMED SAVE BUTTON
+            ElevatedButton(
+              onPressed: loading ? null : _saveBudget,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _kAccentColor, // Stormy Teal
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                minimumSize: const Size(double.infinity, 50),
               ),
+              child: Text(isEditMode ? "Update Budget" : "Save Budget", style: const TextStyle(fontSize: 16)),
             ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _onCreatePlanPressed,
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
-                child: const Text("Create Plan (50/30/20)"),
+            if (isEditMode)
+              // 🔹 THEMED DELETE BUTTON
+              TextButton(
+                onPressed: _deleteBudget,
+                child: const Text(
+                  "Delete Budget",
+                  style: TextStyle(color: _kDangerColor), // Coral Glow for danger
+                ),
               ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _groupRuleCard() {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "50/30/20 Rule Breakdown",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            _ruleRow("Needs (50%)", needsBudget),
-            _ruleRow("Wants (30%)", wantsBudget),
-            _ruleRow("Savings (20%)", savingsBudget),
-          ],
+  // ---------------- VIEW OLD BUTTON ----------------
+  Widget _buildViewOldBudgetsButton() {
+    return SizedBox(
+      height: 40,
+      child: OutlinedButton.icon(
+        onPressed: _viewOldBudgets,
+        icon: const Icon(Icons.history, size: 20),
+        label: const Text("View/Edit Old Budgets"),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _kAccentColor, // Stormy Teal
+          side: const BorderSide(color: _kAccentColor, width: 1.5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
   }
 
-  Widget _ruleRow(String label, double amount) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label),
-          Text(
-            "Rs ${amount.toStringAsFixed(0)}",
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryTile(String category, double amount) {
+  // ---------------- PERIOD SELECTOR ----------------
+  Widget _buildPeriodSelector() {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        title: Text(category),
-        subtitle: Text("Priority: ${categoryPriorityLabel[category] ?? "Low"}"),
-        trailing: Text(
-          "Rs ${amount.toStringAsFixed(0)}",
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("Budget Period",
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+            const SizedBox(height: 12),
+            // 🔹 THEMED DROPDOWN
+            DropdownButtonFormField<BudgetPeriodType>(
+              value: selectedPeriod,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: _kAccentColor, width: 2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              items: const [
+                DropdownMenuItem(
+                    value: BudgetPeriodType.monthly,
+                    child: Text("Monthly")),
+                DropdownMenuItem(
+                    value: BudgetPeriodType.daily, child: Text("Daily")),
+                DropdownMenuItem(
+                    value: BudgetPeriodType.custom,
+                    child: Text("Custom Days")),
+              ],
+              onChanged: (v) {
+                setState(() {
+                  selectedPeriod = v!;
+                  // Reset edit mode when changing period type
+                  isEditMode = false;
+                  editingBudgetKey = null;
+                  // Clear controllers to start fresh
+                  for (final c in categoryControllers.values) {
+                    c.clear();
+                  }
+                });
+              },
+            ),
+            if (selectedPeriod == BudgetPeriodType.custom) ...[
+              const SizedBox(height: 12),
+              // 🔹 THEMED TEXT FIELD
+              TextField(
+                keyboardType: TextInputType.number,
+                controller: TextEditingController(text: customDays.toString()),
+                decoration: InputDecoration(
+                  labelText: "Number of days",
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: _kAccentColor, width: 2),
+                  ),
+                ),
+                onChanged: (v) {
+                  customDays = int.tryParse(v) ?? 7;
+                },
+              ),
+            ],
+          ],
         ),
       ),
     );
+  }
+
+  // ---------------- CATEGORY TILE ----------------
+  Widget _buildCategoryTile(String category) {
+    return Card(
+      elevation: 1,
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        title: Text(category, style: const TextStyle(color: Colors.black87)),
+        trailing: SizedBox(
+          width: 120,
+          // 🔹 THEMED TEXT FIELD
+          child: TextField(
+            controller: categoryControllers[category],
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.right,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+            decoration: const InputDecoration(
+              prefixText: "Rs ",
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------- TOAST ----------------
+  void _toast(String msg) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg)));
   }
 }

@@ -1,7 +1,15 @@
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
+
+import '../../models/user_model.dart';
+import '../../models/budget_model.dart';
+
+// ---------- THEME COLORS ----------
+const Color kAccentColor = Color(0xFF156064);
+const Color kSuccessColor = Color(0xFF00C49A);
+const Color kDangerColor = Color(0xFFFB8F67);
+// ----------------------------------
 
 class AdvancedBudgetScreen extends StatefulWidget {
   const AdvancedBudgetScreen({super.key});
@@ -10,280 +18,447 @@ class AdvancedBudgetScreen extends StatefulWidget {
   State<AdvancedBudgetScreen> createState() => _AdvancedBudgetScreenState();
 }
 
+enum BudgetType { need, want, saving }
+
 class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
-  bool loading = true;
+  bool _loading = true;
+  bool _predicting = false; // State to show prediction loading
 
-  Map<String, double> categoryBudget = {};
-  Map<String, double> categorySpent = {};
-  List<double> monthlyTrend = [];
+  UserModel? _user;
+  final Map<String, TextEditingController> _controllers = {};
 
-  double totalBudget = 0;
-  double totalSavingsRecommended = 0;
+  // --- 50/30/20 Structure ---
+  final Map<String, BudgetType> _budgetStructure = {
+    'Food': BudgetType.need,
+    'Transport': BudgetType.need,
+    'Bills': BudgetType.need,
+    'Health': BudgetType.need,
+    'Education': BudgetType.need,
+    'Shopping': BudgetType.want,
+    'Entertain': BudgetType.want,
+    'Other': BudgetType.want,
+  };
 
+  List<String> get _categories => _budgetStructure.keys.toList();
+
+  // ---------------- INIT ----------------
   @override
   void initState() {
     super.initState();
-    _loadBudgetData();
+    _loadData();
   }
 
-  Future<void> _loadBudgetData() async {
+  Future<void> _loadData() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
+    if (user == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
     final uid = user.uid;
 
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
+
+    _user = UserModel.fromMap(
+      userDoc.id,
+      userDoc.data()!,
+    );
+
+    if (_user!.income == 0) {
+      _user = _user!.copyWith(income: 2000.0);
+    }
+
+    // Initialise all controllers
+    for (final category in _categories) {
+      _controllers[category] = TextEditingController(text: '0');
+    }
+
+    // Default to 50/30/20 initially
+    _generate503020BudgetControllers();
+
+    setState(() => _loading = false);
+  }
+
+  // ---------------- 50/30/20 BUDGET LOGIC ----------------
+  void _generate503020BudgetControllers() {
+    final double income = _user!.income;
+    final double needsPool = income * 0.50;
+    final double wantsPool = income * 0.30;
+
+    final List<String> needCategories = _budgetStructure.keys
+        .where((cat) => _budgetStructure[cat] == BudgetType.need)
+        .toList();
+    final List<String> wantCategories = _budgetStructure.keys
+        .where((cat) => _budgetStructure[cat] == BudgetType.want)
+        .toList();
+
+    if (needCategories.isNotEmpty) {
+      final double needAllocation = needsPool / needCategories.length;
+      for (final category in needCategories) {
+        _controllers[category]!.text = needAllocation.toStringAsFixed(0);
+      }
+    }
+
+    if (wantCategories.isNotEmpty) {
+      final double wantAllocation = wantsPool / wantCategories.length;
+      for (final category in wantCategories) {
+        _controllers[category]!.text = wantAllocation.toStringAsFixed(0);
+      }
+    }
+  }
+
+  // ---------------- PREDICTION LOGIC ----------------
+  Future<void> _predictBasedOnHistory() async {
+    setState(() => _predicting = true);
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
     try {
-      final budgetDoc = await FirebaseFirestore.instance
-          .collection("users")
+      // 1. Fetch last 6 budgets to get an average
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
           .doc(uid)
-          .collection("budget")
-          .doc("current_month")
+          .collection('budgets')
+          .orderBy('createdAt', descending: true)
+          .limit(6)
           .get();
 
-      if (!budgetDoc.exists) {
-        setState(() => loading = false);
+      // 2. CHECK: If not enough data
+      if (snapshot.docs.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Not enough past data to predict!'),
+            backgroundColor: Colors.grey,
+          ),
+        );
+        setState(() => _predicting = false);
         return;
       }
 
-      // Safe conversion
-      final catBudgetRaw = budgetDoc.data()?["categoryBudget"] ?? {};
-      categoryBudget = catBudgetRaw.map<String, double>((key, value) => MapEntry(key, (value as num).toDouble()));
-
-      totalBudget = (budgetDoc.data()?["predictedBudget"] ?? 0).toDouble();
-      totalSavingsRecommended = (budgetDoc.data()?["recommendedSavings"] ?? 0).toDouble();
-
-      await _loadSpendingData();
-      await _loadTrendData();
-    } catch (e) {
-      print("Error loading budget: $e");
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
-  }
-
-  Future<void> _loadSpendingData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final uid = user.uid;
-
-    final snapshot = await FirebaseFirestore.instance
-        .collection("users")
-        .doc(uid)
-        .collection("transactions")
-        .where("type", isEqualTo: "expense")
-        .get();
-
-    categorySpent = {};
-
-    for (var doc in snapshot.docs) {
-      final data = doc.data();
-      String category = data["category"] ?? "Others";
-      double amount = (data["amount"] ?? 0).toDouble();
-      categorySpent[category] = (categorySpent[category] ?? 0) + amount;
-    }
-  }
-
-  Future<void> _loadTrendData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final uid = user.uid;
-    final now = DateTime.now();
-
-    monthlyTrend = List.filled(6, 0);
-
-    for (int i = 0; i < 6; i++) {
-      int month = now.month - i;
-      int year = now.year;
-
-      if (month <= 0) {
-        month += 12;
-        year -= 1;
+      // 3. Calculate Averages
+      Map<String, List<double>> historyValues = {};
+      
+      // Initialize lists
+      for (var cat in _categories) {
+        historyValues[cat] = [];
       }
 
-      DateTime start = DateTime(year, month, 1);
-      DateTime end = (month < 12) ? DateTime(year, month + 1, 1) : DateTime(year + 1, 1, 1);
-
-      final snapshot = await FirebaseFirestore.instance
-          .collection("users")
-          .doc(uid)
-          .collection("transactions")
-          .where("type", isEqualTo: "expense")
-          .where("date", isGreaterThanOrEqualTo: start)
-          .where("date", isLessThan: end)
-          .get();
-
-      double total = 0;
+      // Collect data
       for (var doc in snapshot.docs) {
-        total += (doc.data()["amount"] ?? 0).toDouble();
+        final data = doc.data();
+        final catBudget = data['categoryBudget'] as Map<String, dynamic>?;
+
+        if (catBudget != null) {
+          for (var cat in _categories) {
+            if (catBudget.containsKey(cat)) {
+              // Handle safely whether Firestore returns int or double
+              num val = catBudget[cat] ?? 0;
+              historyValues[cat]?.add(val.toDouble());
+            }
+          }
+        }
       }
 
-      monthlyTrend[5 - i] = total; // oldest to newest
+      // Apply averages to controllers
+      historyValues.forEach((category, values) {
+        if (values.isNotEmpty) {
+          double average = values.reduce((a, b) => a + b) / values.length;
+          _controllers[category]?.text = average.toStringAsFixed(0);
+        }
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Predicted based on last ${snapshot.docs.length} records!'),
+          backgroundColor: kSuccessColor,
+        ),
+      );
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error predicting: $e'), backgroundColor: kDangerColor),
+      );
+    } finally {
+      setState(() => _predicting = false);
     }
   }
 
-  double _percentUsed(String category) {
-    if (!categorySpent.containsKey(category) || !categoryBudget.containsKey(category)) return 0;
-    return (categorySpent[category]! / categoryBudget[category]!) * 100;
+  // ---------------- DYNAMIC GETTERS ----------------
+  double get _actualNeedsTotal {
+    return _budgetStructure.entries.fold(0.0, (sum, entry) {
+      if (entry.value == BudgetType.need) {
+        return sum + (double.tryParse(_controllers[entry.key]?.text ?? '0') ?? 0);
+      }
+      return sum;
+    });
   }
 
-  String _generateRecommendation() {
-    double totalSpent = categorySpent.values.fold(0, (a, b) => a + b);
-    double savingRate = totalBudget > 0 ? totalSavingsRecommended / totalBudget * 100 : 0;
+  double get _actualWantsTotal {
+    return _budgetStructure.entries.fold(0.0, (sum, entry) {
+      if (entry.value == BudgetType.want) {
+        return sum + (double.tryParse(_controllers[entry.key]?.text ?? '0') ?? 0);
+      }
+      return sum;
+    });
+  }
 
-    List<String> overspent = [];
-    categoryBudget.forEach((cat, budget) {
-      if ((categorySpent[cat] ?? 0) > budget) overspent.add(cat);
+  double get _totalBudgetedSpending => _actualNeedsTotal + _actualWantsTotal;
+
+  double get _flexibleSavings {
+    return _user!.income - _totalBudgetedSpending;
+  }
+
+  // ---------------- SAVE ----------------
+  Future<void> _saveBudget() async {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
+    final Map<String, double> categoryBudget = {};
+    for (final entry in _controllers.entries) {
+      categoryBudget[entry.key] = double.tryParse(entry.value.text) ?? 0;
+    }
+
+    categoryBudget['Savings'] = _flexibleSavings.clamp(0.0, double.infinity);
+
+    final model = BudgetModel(
+      periodType: 'monthly',
+      periodKey: '${DateTime.now().year}-${DateTime.now().month}',
+      categoryBudget: categoryBudget,
+    );
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('budgets')
+        .add({
+      'periodType': model.periodType,
+      'periodKey': model.periodKey,
+      'categoryBudget': model.categoryBudget,
+      'createdAt': Timestamp.now(),
     });
 
-    if (overspent.isNotEmpty) {
-      return "You overspent in: ${overspent.join(", ")}.\n"
-          "Reduce these next month or increase budget for higher priority categories.";
-    }
+    if (!mounted) return;
 
-    if (savingRate < 15) return "Your savings rate is low (${savingRate.toStringAsFixed(1)}%). Try saving at least 20%.";
-    if (totalSpent < totalBudget * 0.7) return "Great job! You are spending less than expected this month.";
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Flexible Budget saved successfully!'),
+        backgroundColor: kSuccessColor,
+      ),
+    );
 
-    return "Budget seems stable. Keep tracking your expenses!";
+    Navigator.pop(context);
   }
 
   @override
+  void dispose() {
+    for (final c in _controllers.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  // ---------------- UI ----------------
+  @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
       appBar: AppBar(
-        title: const Text("Advanced Budget Insights"),
-        backgroundColor: Colors.deepPurple,
-      ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator(color: Colors.deepPurple))
-          : ListView(
-              padding: const EdgeInsets.all(12),
-              children: [
-                _buildOverviewCard(),
-                const SizedBox(height: 20),
-                _buildTrendChart(),
-                const SizedBox(height: 20),
-                _buildCategoryBars(),
-                const SizedBox(height: 20),
-                _buildRecommendationCard(),
-                const SizedBox(height: 30),
-              ],
-            ),
-    );
-  }
-
-  Widget _buildOverviewCard() {
-    return Card(
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Monthly Overview", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            Text("Total Budget: ₹${totalBudget.toStringAsFixed(2)}", style: const TextStyle(fontSize: 16)),
-            Text("Recommended Savings: ₹${totalSavingsRecommended.toStringAsFixed(2)}", style: const TextStyle(fontSize: 16)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTrendChart() {
-    if (monthlyTrend.isEmpty) return const SizedBox.shrink();
-
-    double maxY = monthlyTrend.isNotEmpty ? monthlyTrend.reduce((a, b) => a > b ? a : b) + 500 : 1000;
-
-    return Card(
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: SizedBox(
-          height: 220,
-          child: LineChart(
-            LineChartData(
-              minX: 0,
-              maxX: 5,
-              minY: 0,
-              maxY: maxY,
-              titlesData: FlTitlesData(
-                bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                  showTitles: true,
-                  getTitlesWidget: (value, meta) {
-                    List<String> months = ["-5", "-4", "-3", "-2", "-1", "Now"];
-                    return Text(months[value.toInt()]);
-                  },
-                )),
+        title: const Text('Flexible 50/30/20 Budget'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 1,
+        actions: [
+          // PREDICT BUTTON
+          if (_predicting)
+            const Padding(
+              padding: EdgeInsets.all(12.0),
+              child: SizedBox(
+                width: 20, height: 20, 
+                child: CircularProgressIndicator(strokeWidth: 2)
               ),
-              lineBarsData: [
-                LineChartBarData(
-                  isCurved: true,
-                  spots: List.generate(
-                    monthlyTrend.length,
-                    (i) => FlSpot(i.toDouble(), monthlyTrend[i]),
-                  ),
-                  barWidth: 4,
-                  dotData: FlDotData(show: true),
-                )
-              ],
+            )
+          else
+            IconButton(
+              onPressed: _predictBasedOnHistory,
+              icon: const Icon(Icons.auto_fix_high, color: kAccentColor),
+              tooltip: 'Predict from History',
+            ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildExplanationCard(),
+          const SizedBox(height: 15),
+          _buildSummaryCard(),
+          const SizedBox(height: 25),
+          ..._categories.map(_buildCategoryField),
+          const SizedBox(height: 30),
+          ElevatedButton(
+            onPressed: _flexibleSavings < 0 ? null : _saveBudget,
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size.fromHeight(50),
+              backgroundColor: _flexibleSavings < 0
+                  ? kDangerColor.withOpacity(0.5)
+                  : kAccentColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text(
+              _flexibleSavings < 0
+                  ? ' Over Budget! Reduce Spending'
+                  : 'Apply & Save Flexible Budget',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExplanationCard() {
+    return Card(
+      color: kAccentColor.withOpacity(0.1),
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Text(
+          'Tap the magic wand icon (top right) to predict budget from past data, or adjust manually below.',
+          style: const TextStyle(color: kAccentColor, fontWeight: FontWeight.w500),
         ),
       ),
     );
   }
 
-  Widget _buildCategoryBars() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: categoryBudget.keys.map((category) {
-        double percent = _percentUsed(category);
-        bool warn = percent > 80;
+  Widget _buildSummaryCard() {
+    final double income = _user!.income;
+    final double targetSavings = income * 0.20;
+    final double actualNeeds = _actualNeedsTotal;
+    final double actualWants = _actualWantsTotal;
+    final double flexibleSavings = _flexibleSavings;
+    final double totalBudgeted = actualNeeds + actualWants;
 
-        return Card(
-          child: ListTile(
-            title: Text(category),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                LinearProgressIndicator(
-                  value: percent.clamp(0, 100) / 100,
-                  color: percent >= 100
-                      ? Colors.red
-                      : percent > 80
-                          ? Colors.orange
-                          : Colors.deepPurple,
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  "Used: ₹${categorySpent[category]?.toStringAsFixed(2) ?? "0"} / "
-                  "₹${categoryBudget[category]?.toStringAsFixed(2) ?? "0"} "
-                  "(${percent.toStringAsFixed(1)}%)",
-                  style: TextStyle(
-                    color: warn ? Colors.red : Colors.black,
-                    fontWeight: warn ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Total Income: ${_user!.currency} ${income.toStringAsFixed(0)}',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const Divider(height: 16),
+          _buildSummaryRow(
+            'Actual Needs (Target: ${income * 0.50})',
+            actualNeeds,
+            color: actualNeeds > income * 0.50 ? kDangerColor : kAccentColor,
+            bold: true,
+          ),
+          _buildSummaryRow(
+            'Actual Wants (Target: ${income * 0.30})',
+            actualWants,
+            color: kDangerColor,
+            bold: true,
+          ),
+          const Divider(height: 16),
+          _buildSummaryRow(
+            '**Flexible Savings (20% Target: ${targetSavings.toStringAsFixed(0)})**',
+            flexibleSavings,
+            color: flexibleSavings >= targetSavings
+                ? kSuccessColor
+                : (flexibleSavings < 0 ? kDangerColor : Colors.orange),
+            bold: true,
+          ),
+          const Divider(height: 16),
+          Text(
+            'Total Budgeted: ${_user!.currency} ${totalBudgeted.toStringAsFixed(0)}',
+            style: const TextStyle(
+              color: kAccentColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
             ),
           ),
-        );
-      }).toList(),
+        ],
+      ),
     );
   }
 
-  Widget _buildRecommendationCard() {
-    return Card(
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text(
-          _generateRecommendation(),
-          style: const TextStyle(fontSize: 16, height: 1.4),
+  Widget _buildSummaryRow(String label, double amount,
+      {Color? color, bool bold = false}) {
+    final String cleanLabel = label.contains('Target:')
+        ? label.substring(0, label.indexOf('(')).trim()
+        : label.replaceAll('**', '');
+    final String subLabel =
+        label.contains('Target:') ? label.substring(label.indexOf('(')) : '';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                cleanLabel,
+                style: TextStyle(
+                  color: color ?? Colors.black87,
+                  fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              if (subLabel.isNotEmpty)
+                Text(
+                  subLabel,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 12,
+                  ),
+                ),
+            ],
+          ),
+          Text(
+            '${_user!.currency} ${amount.toStringAsFixed(0)}',
+            style: TextStyle(
+              color: color ?? Colors.black,
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryField(String category) {
+    final type = _budgetStructure[category];
+    final typeColor = type == BudgetType.need ? kAccentColor : kDangerColor;
+    final typeIcon = type == BudgetType.need ? Icons.check_circle : Icons.star;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: _controllers[category],
+        keyboardType: TextInputType.number,
+        onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(
+          labelText: '$category (${type.toString().split('.').last.toUpperCase()})',
+          prefixIcon: Icon(typeIcon, color: typeColor),
+          suffixText: _user!.currency,
+          border: const OutlineInputBorder(),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: typeColor, width: 2),
+          ),
         ),
       ),
     );

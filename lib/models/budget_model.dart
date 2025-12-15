@@ -1,23 +1,46 @@
 class BudgetModel {
-  final double needs;
-  final double wants;
-  final double savings;
+  final String? docId; // Added docId field, made nullable in constructor
+  final String periodType;
+  final int? periodDays; // Made nullable since monthly/daily might not use it
+  final String periodKey;
+  final Map<String, double> categoryBudget;
 
-  BudgetModel({required this.needs, required this.wants, required this.savings});
+  BudgetModel({
+    this.docId, // Include in constructor
+    required this.periodType,
+    this.periodDays,
+    required this.periodKey,
+    required this.categoryBudget,
+  });
 
-  factory BudgetModel.fromMap(Map<String, dynamic> data) {
+  factory BudgetModel.fromMap(Map<String, dynamic> map, {String? docId}) {
     return BudgetModel(
-      needs: (data['needs'] ?? 50).toDouble(),
-      wants: (data['wants'] ?? 30).toDouble(),
-      savings: (data['savings'] ?? 20).toDouble(),
+      docId: docId, // Pass docId to constructor
+      periodType: map['periodType'] ?? 'monthly',
+      periodDays: map['periodDays'] as int?,
+      periodKey: map['periodKey'] ?? '',
+      categoryBudget:
+          Map<String, double>.from(
+            (map['categoryBudget'] as Map? ?? {}) // Handle null map
+                .map((k, v) => MapEntry(k, (v as num).toDouble())),
+          ),
     );
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'needs': needs,
-      'wants': wants,
-      'savings': savings,
-    };
+  // ✅ FIX: Define the copyWith method
+  BudgetModel copyWith({
+    String? docId,
+    String? periodType,
+    int? periodDays,
+    String? periodKey,
+    Map<String, double>? categoryBudget,
+  }) {
+    return BudgetModel(
+      docId: docId ?? this.docId,
+      periodType: periodType ?? this.periodType,
+      periodDays: periodDays ?? this.periodDays,
+      periodKey: periodKey ?? this.periodKey,
+      categoryBudget: categoryBudget ?? this.categoryBudget,
+    );
   }
 }
