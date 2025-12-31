@@ -3,7 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import '../../models/budget_model.dart';
+import 'package:provider/provider.dart';
+
+import '../../provider/currency_provider.dart';
+import '../../l10n/app_localizations.dart';
+
 import '../add_transaction/add_income_screen.dart';
 import '../add_transaction/add_expense_screen.dart';
 import '../add_transaction/receipt_scanner.dart';
@@ -12,26 +16,19 @@ import '../setting/setting.dart';
 import '../budget/budget_setup_screen.dart';
 import '../transactions/transactions_screen.dart';
 import '../budget/your_budget_screen.dart';
-import 'package:provider/provider.dart';
-import '../../provider/currency_provider.dart';
-
-
-
-//  PDF Screen Import (adjust path if needed)
 import '../pdf/pdf.dart';
-
-//  Notifications Screen Import (adjust path if needed)
 import '../notification/notification_screen.dart';
 
-const Color kStormyTeal = Color(0xFF156064); 
+const Color kStormyTeal = Color(0xFF156064);
 const Color kMintLeaf = Color(0xFF00C49A);
 const Color kCoralGlow = Color(0xFFFB8F67);
 
 // Background and Accent Colors for this screen
 const Color _kBackgroundColor = Color(0xFFFAFAFA); // Off-White
-const Color _kAccentColor = kStormyTeal; 
+const Color _kAccentColor = kStormyTeal;
 const Color _kDangerColor = kCoralGlow;
 const Color _kSuccessColor = kMintLeaf;
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -43,28 +40,61 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  /// Keep internal values in English for logic/queries
+  /// UI will show localized labels.
   String selectedPeriod = 'Month';
+
   bool isExpanded = false;
 
- 
+  String _categoryLabel(AppLocalizations t, String rawCategory) {
+    final c = rawCategory.trim().toLowerCase();
+    switch (c) {
+      case 'food':
+        return t.food;
+      case 'transport':
+        return t.transport;
+      case 'shopping':
+        return t.shopping;
+      case 'bills':
+        return t.bills;
+      case 'entertain':
+      case 'entertainment':
+        return t.entertainment;
+      case 'health':
+        return t.health;
+      case 'education':
+        return t.education;
+      case 'other':
+      default:
+        return t.other;
+    }
+  }
+
+  String _periodLabel(AppLocalizations t, String value) {
+    switch (value) {
+      case 'Week':
+        return t.weekly;
+      case 'Month':
+        return t.monthly;
+      case 'Year':
+        return t.yearly;
+      default:
+        return value;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final currency = context.watch<CurrencyProvider>(); // Assuming CurrencyProvider is defined and imported
+    final t = AppLocalizations.of(context)!;
     final user = _auth.currentUser;
     final userId = user?.uid;
 
     if (userId == null) {
-      return const Scaffold(
-        body: Center(
-          child: Text(
-            'User not logged in. Please log in to view the dashboard.',
-          ),
-        ),
-      );
+      return Scaffold(body: Center(child: Text(t.userNotLoggedIn)));
     }
 
     return Scaffold(
-      backgroundColor: _kBackgroundColor, // Set base background to Off-White
+      backgroundColor: _kBackgroundColor,
       body: SafeArea(
         child: Stack(
           children: [
@@ -85,7 +115,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       const SizedBox(height: 20),
                       _buildRecentTransactions(userId),
                       const SizedBox(height: 24),
-                      _buildYourBudgetCard(), // Budget card moved outside transactions
+                      _buildYourBudgetCard(),
                       const SizedBox(height: 24),
                     ],
                   ),
@@ -115,13 +145,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
               bottom: 30,
               left: (MediaQuery.of(context).size.width / 2) - 30,
               child: FloatingActionButton(
-                backgroundColor: _kAccentColor, // Changed FAB color to Stormy Teal
+                backgroundColor: _kAccentColor,
                 onPressed: () {
                   setState(() {
                     isExpanded = !isExpanded;
                   });
                 },
-                child: Icon(isExpanded ? Icons.close : Icons.add, size: 32, color: Colors.white), // Ensure icon is white
+                child: Icon(
+                  isExpanded ? Icons.close : Icons.add,
+                  size: 32,
+                  color: Colors.white,
+                ),
               ),
             ),
           ],
@@ -129,58 +163,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-  // - Notification icon navigates to NotificationScreen
-  // - Shows badge with unread notifications count (resolved == false)
- // ✅ UPDATED APP BAR:
+
   Widget _buildAppBar(String userId) {
+    final t = AppLocalizations.of(context)!;
+
     return SliverAppBar(
       expandedHeight: 110,
       floating: false,
       pinned: true,
-      backgroundColor: _kAccentColor, // Use Stormy Teal as the base
+      backgroundColor: _kAccentColor,
       elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
         background: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
           stream: _firestore.collection('users').doc(userId).snapshots(),
           builder: (context, snapshot) {
-            String displayName = "User";
+            String displayName = t.user;
             String? photoUrl;
 
             final authUser = _auth.currentUser;
 
             if (snapshot.connectionState == ConnectionState.waiting) {
-              displayName = "Loading...";
+              displayName = t.loading;
             }
 
             if (snapshot.hasData && snapshot.data!.exists) {
               final userData = snapshot.data!.data();
 
               displayName =
-                  (userData?['name'] as String?) ??
-                  (authUser?.displayName ?? "User");
+                  (userData?['name'] as String?) ?? (authUser?.displayName ?? t.user);
 
-             final String? dbPhotoUrl = userData?['imageUrl'] as String?;
+              final String? dbPhotoUrl = userData?['imageUrl'] as String?;
               final photoUpdatedAt = userData?['photoUpdatedAt'];
 
-                 if (dbPhotoUrl != null && dbPhotoUrl.isNotEmpty) {
-                 photoUrl = dbPhotoUrl;
-                 if (photoUpdatedAt != null) {
-    photoUrl = "$photoUrl?v=${photoUpdatedAt.toString()}";
-  }
-} else {
-  photoUrl = authUser?.photoURL;
-}
+              if (dbPhotoUrl != null && dbPhotoUrl.isNotEmpty) {
+                photoUrl = dbPhotoUrl;
+                if (photoUpdatedAt != null) {
+                  photoUrl = "$photoUrl?v=${photoUpdatedAt.toString()}";
+                }
+              } else {
+                photoUrl = authUser?.photoURL;
+              }
             }
-
 
             return Container(
               decoration: BoxDecoration(
-                // Using a gradient based on the Stormy Teal for a rich header look
                 gradient: LinearGradient(
-                  colors: [
-                    _kAccentColor,
-                    _kAccentColor.withOpacity(0.9), // Slightly lighter shade
-                  ],
+                  colors: [_kAccentColor, _kAccentColor.withOpacity(0.9)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -193,10 +221,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       CircleAvatar(
                         radius: 25,
-                        backgroundImage:
-                            (photoUrl != null && photoUrl.isNotEmpty)
-                                ? NetworkImage(photoUrl)
-                                : null,
+                        backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
+                            ? NetworkImage(photoUrl)
+                            : null,
                         backgroundColor: Colors.white24,
                         child: (photoUrl == null || photoUrl.isEmpty)
                             ? const Icon(Icons.person, color: Colors.white)
@@ -207,9 +234,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
-                            'Welcome back,',
-                            style: TextStyle(
+                          Text(
+                            t.welcomeBack,
+                            style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 12,
                             ),
@@ -226,32 +253,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ],
                   ),
-
-                  // ✅ PDF + Notifications (with unread badge)
                   Row(
                     children: [
                       IconButton(
                         icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
-                        tooltip: "Download PDF Report",
+                        tooltip: t.downloadPdfReport,
                         onPressed: () {
-                          // NOTE: Assuming PdfGenerateScreen is defined and imported
-                          // Otherwise, this will cause an error
-                          // ignore: unnecessary_null_comparison
-                          if (const PdfGenerateScreen() != null) { 
-                            // This check is mainly to suppress analysis warnings for missing definitions
-                          }
-                          // Remove the above check and use the original navigation:
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                            builder: (_) => const PdfGenerateScreen(),
-                           ),
-                           );
+                            MaterialPageRoute(builder: (_) => const PdfGenerateScreen()),
+                          );
                         },
                       ),
                       const SizedBox(width: 4),
-
-                      // ✅ Notification badge using alerts collection
                       StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                         stream: _firestore
                             .collection('users')
@@ -271,15 +285,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   color: Colors.white,
                                   size: 28,
                                 ),
-                                tooltip: "Notifications",
+                                tooltip: t.notifications,
                                 onPressed: () {
-                                  // NOTE: Assuming NotificationScreen is defined and imported
-                                  // Otherwise, this will cause an error
-                                  // ignore: unnecessary_null_comparison
-                                  if (const NotificationScreen() != null) {
-                                    // This check is mainly to suppress analysis warnings for missing definitions
-                                  }
-                                  // Remove the above check and use the original navigation:
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -298,7 +305,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: _kDangerColor, // Changed badge color to Coral Glow
+                                      color: _kDangerColor,
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: Colors.white,
@@ -335,23 +342,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-// ... (The rest of the class methods will follow in the next steps)
 
-// ✅ REFACTORED: Balance Card (using Stormy Teal gradient)
+  // ✅ UPDATED: prevents bottom overflow in Arabic/large fonts
   Widget _buildBalanceCard(String userId) {
+    final t = AppLocalizations.of(context)!;
     final currency = context.watch<CurrencyProvider>();
+
     return StreamBuilder<DocumentSnapshot>(
       stream: _firestore.collection('users').doc(userId).snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           if (snapshot.error.toString().contains('permission-denied')) {
             return _buildErrorCard(
-              'Permission Denied',
-              'Check your Firebase Firestore Security Rules (users/{userId}).',
+              t.permissionDeniedTitle,
+              t.permissionDeniedMessage(snapshot.error!),
             );
           }
           return Center(
-            child: Text('Error loading balance: ${snapshot.error}'),
+            child: Text('${t.errorLoadingBalance}: ${snapshot.error}'),
           );
         }
 
@@ -359,27 +367,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(20.0),
-              child: CircularProgressIndicator(color: _kAccentColor), // Themed loader
+              child: CircularProgressIndicator(color: _kAccentColor),
             ),
           );
         }
 
         if (!snapshot.hasData || snapshot.data?.data() == null) {
           return _buildErrorCard(
-            'Balance Data Missing',
-            'Ensure a document exists at "users/{$userId}" and contains a "balance" map field.',
+            t.balanceDataMissingTitle,
+            t.balanceDataMissingMessage(snapshot.error ?? ''),
           );
         }
 
         final data = snapshot.data?.data() as Map<String, dynamic>?;
         final balance = data?['balance'] as Map<String, dynamic>?;
 
-        final totalBalance =
-            (balance?['totalBalance'] as num?)?.toDouble() ?? 0.0;
-        final monthlyIncome =
-            (balance?['monthlyIncome'] as num?)?.toDouble() ?? 0.0;
-        final monthlyExpense =
-            (balance?['monthlyExpense'] as num?)?.toDouble() ?? 0.0;
+        final totalBalance = (balance?['totalBalance'] as num?)?.toDouble() ?? 0.0;
+        final monthlyIncome = (balance?['monthlyIncome'] as num?)?.toDouble() ?? 0.0;
+        final monthlyExpense = (balance?['monthlyExpense'] as num?)?.toDouble() ?? 0.0;
 
         final savingsRate = monthlyIncome > 0
             ? ((monthlyIncome - monthlyExpense) / monthlyIncome * 100)
@@ -389,76 +394,98 @@ class _DashboardScreenState extends State<DashboardScreen> {
           margin: const EdgeInsets.symmetric(horizontal: 20),
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            // 🔹 THEMED GRADIENT: Using Stormy Teal shades
             gradient: LinearGradient(
-              colors: [
-                _kAccentColor,
-                _kAccentColor.withOpacity(0.9), // Darker shade of teal
-              ],
+              colors: [_kAccentColor, _kAccentColor.withOpacity(0.9)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
-              // 🔹 THEMED SHADOW: Using Stormy Teal for the shadow effect
               BoxShadow(
                 color: _kAccentColor.withOpacity(0.35),
-                blurRadius: 25, // Increased blur for a softer lift
+                blurRadius: 25,
                 offset: const Offset(0, 15),
               ),
             ],
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Total Balance',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${currency.symbol}${totalBalance.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 36,
-                  letterSpacing: 1.0,
-                  fontWeight: FontWeight.bold,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  t.totalBalance,
+                  maxLines: 1,
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
               ),
+              const SizedBox(height: 8),
+
+              // ✅ also safe for large fonts
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '${currency.symbol}${totalBalance.toStringAsFixed(2)}',
+                  maxLines: 1,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 36,
+                    letterSpacing: 1.0,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 24),
+
+              // ✅ FIX: scale-down + no wrap => no bottom overflow
               Row(
                 children: [
                   Expanded(
                     child: _buildBalanceItem(
-                      'Income',
+                      t.income,
                       monthlyIncome,
                       Icons.arrow_upward,
-                      _kSuccessColor, // Mint Leaf
+                      _kSuccessColor,
                     ),
                   ),
                   Container(width: 1, height: 40, color: Colors.white24),
                   Expanded(
                     child: _buildBalanceItem(
-                      'Expenses',
+                      t.expenses,
                       monthlyExpense,
                       Icons.arrow_downward,
-                      _kDangerColor, // Coral Glow
+                      _kDangerColor,
                     ),
                   ),
                   Container(width: 1, height: 40, color: Colors.white24),
                   Expanded(
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          'Savings',
-                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            t.savings,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          '${savingsRate.toStringAsFixed(1)}%',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '${savingsRate.toStringAsFixed(1)}%',
+                            maxLines: 1,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -473,51 +500,61 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ✅ REFACTORED: Balance Item Helper (used by the Balance Card)
+  // ✅ UPDATED: prevents wrapping and overflow for labels/values
   Widget _buildBalanceItem(
-    
     String label,
     double amount,
     IconData icon,
-    Color color, // Will be _kSuccessColor (Mint Leaf) or _kDangerColor (Coral Glow)
-    
+    Color color,
   ) {
-    final currency = context.watch<CurrencyProvider>(); 
+    final currency = context.watch<CurrencyProvider>();
+
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, color: color, size: 16),
             const SizedBox(width: 4),
-            Text(
-              label,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ),
             ),
           ],
         ),
         const SizedBox(height: 4),
-        Text(
-          '${currency.symbol}${amount.toStringAsFixed(0)}',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            '${currency.symbol}${amount.toStringAsFixed(0)}',
+            maxLines: 1,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ],
     );
   }
 
-  // ✅ REFACTORED: Error Card (using Coral Glow)
   Widget _buildErrorCard(String title, String message) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _kDangerColor.withOpacity(0.1), // Coral Glow tint
+        color: _kDangerColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: _kDangerColor, width: 1), // Coral Glow border
+        border: Border.all(color: _kDangerColor, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -527,7 +564,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: _kDangerColor, // Coral Glow text
+              color: _kDangerColor,
             ),
           ),
           const SizedBox(height: 8),
@@ -541,6 +578,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildQuickStats(String userId) {
+    final t = AppLocalizations.of(context)!;
+
     return StreamBuilder<QuerySnapshot>(
       stream: _firestore
           .collection('users')
@@ -553,11 +592,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
-              'Error loading stats (Permission Denied). Check rules for transactions/{transactionId}.',
-              style: TextStyle(color: _kDangerColor),
+              t.errorLoadingStatsPermissionDenied(snapshot.error!),
+              style: const TextStyle(color: _kDangerColor),
             ),
           );
         }
@@ -574,28 +613,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Expanded(
                 child: _buildStatCard(
-                  'Transactions',
+                  t.transactions,
                   transactionCount.toString(),
                   Icons.receipt_long,
-                  _kAccentColor, // 🔹 THEMED: Stormy Teal
+                  _kAccentColor,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildStatCard(
-                  'Categories',
-                  '8', // Static value for example
+                  t.categories,
+                  '8',
                   Icons.category,
-                  _kSuccessColor, // 🔹 THEMED: Mint Leaf
+                  _kSuccessColor,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildStatCard(
-                  'Pending Bills',
-                  '0', // Static value for example
+                  t.pendingBills,
+                  '0',
                   Icons.pending_actions,
-                  _kDangerColor, // 🔹 THEMED: Coral Glow
+                  _kDangerColor,
                 ),
               ),
             ],
@@ -605,7 +644,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ✅ REFACTORED: Stat Card (Flat style)
   Widget _buildStatCard(
     String label,
     String value,
@@ -618,7 +656,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          // 🔹 THEMED SHADOW: Consistent soft shadow
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
             blurRadius: 10,
@@ -628,7 +665,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       child: Column(
         children: [
-          // Icon color comes from the caller (_buildQuickStats)
           Icon(icon, color: color, size: 28),
           const SizedBox(height: 8),
           Text(
@@ -636,16 +672,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.black87, // Dark text for high contrast
+              color: Colors.black87,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF718096), // Subtler grey text
-            ),
+            style: const TextStyle(fontSize: 11, color: Color(0xFF718096)),
             textAlign: TextAlign.center,
           ),
         ],
@@ -653,16 +686,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ✅ REFACTORED: Charts Section (Container style update)
   Widget _buildChartsSection(String userId) {
+    final t = AppLocalizations.of(context)!;
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20), // Standardized margin
+      margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          // 🔹 THEMED SHADOW: Consistent soft shadow
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
             blurRadius: 10,
@@ -676,48 +709,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Spending Overview',
-                style: TextStyle(
+              Text(
+                t.spendingOverview,
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87, // Darker text
+                  color: Colors.black87,
                 ),
               ),
-              // 🔹 THEMED: Dropdown button
               DropdownButton<String>(
                 value: selectedPeriod,
                 underline: const SizedBox(),
-                style: TextStyle(color: _kAccentColor, fontSize: 14), // Text style
-                icon: const Icon(Icons.arrow_drop_down, color: _kAccentColor), // Icon color
-                items: ['Week', 'Month', 'Year'].map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(
-                      value,
-                      style: const TextStyle(color: Colors.black87), // Ensure dropdown items are readable
-                    ),
-                  );
-                }).toList(),
+                style: const TextStyle(color: _kAccentColor, fontSize: 14),
+                icon: const Icon(Icons.arrow_drop_down, color: _kAccentColor),
+                items: const ['Week', 'Month', 'Year']
+                    .map((v) => DropdownMenuItem<String>(
+                          value: v,
+                          child: Text(
+                            v,
+                            style: const TextStyle(color: Colors.black87),
+                          ),
+                        ))
+                    .toList()
+                    .map((item) {
+                      return DropdownMenuItem<String>(
+                        value: item.value,
+                        child: Text(
+                          _periodLabel(t, item.value!),
+                          style: const TextStyle(color: Colors.black87),
+                        ),
+                      );
+                    })
+                    .toList(),
                 onChanged: (String? newValue) {
-                  setState(() {
-                    selectedPeriod = newValue!;
-                  });
+                  if (newValue == null) return;
+                  setState(() => selectedPeriod = newValue);
                 },
               ),
             ],
           ),
           const SizedBox(height: 20),
-          // NOTE: _buildPieChart(userId) widget is assumed to be implemented separately
-          // Ensure that the chart lines/colors inside _buildPieChart also use the theme palette.
-          SizedBox(height: 200, child: _buildPieChart(userId)), 
+          SizedBox(height: 200, child: _buildPieChart(userId)),
         ],
       ),
     );
   }
 
-// ✅ REFACTORED: Pie Chart with Theme Palette
   Widget _buildPieChart(String userId) {
+    final t = AppLocalizations.of(context)!;
+
     return StreamBuilder<QuerySnapshot>(
       stream: _firestore
           .collection('users')
@@ -730,43 +770,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return const Center(child: CircularProgressIndicator(color: _kAccentColor));
         }
         if (snapshot.hasError) {
-          return const Center(
-            child: Text('Error loading chart data.', style: TextStyle(color: _kDangerColor)),
+          return Center(
+            child: Text(
+              t.errorLoadingChartData,
+              style: const TextStyle(color: _kDangerColor),
+            ),
           );
         }
-        if (snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text('No expense data available', style: TextStyle(color: Colors.grey)));
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Text(
+              t.noExpenseDataAvailable,
+              style: const TextStyle(color: Colors.grey),
+            ),
+          );
         }
 
-        Map<String, double> categoryTotals = {};
+        final Map<String, double> categoryTotals = {};
         for (var doc in snapshot.data!.docs) {
           final data = doc.data() as Map<String, dynamic>;
           final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
-          final category = data['category'] ?? 'Other';
+          final category = (data['category'] as String?) ?? 'Other';
           categoryTotals[category] = (categoryTotals[category] ?? 0) + amount;
         }
 
-        // 🔹 THEMED CHART PALETTE
-        List<Color> themePalette = [
-          _kAccentColor,      // Stormy Teal
-          _kSuccessColor,     // Mint Leaf
-          _kDangerColor,      // Coral Glow
-          const Color(0xFFF8E16C), // Royal Gold
-          const Color(0xFF2D3748), // Deep Slate
-          const Color(0xFFCBD5E0), // Cool Grey
+        final List<Color> themePalette = [
+          _kAccentColor,
+          _kSuccessColor,
+          _kDangerColor,
+          const Color(0xFFF8E16C),
+          const Color(0xFF2D3748),
+          const Color(0xFFCBD5E0),
         ];
 
-        double total = categoryTotals.values.fold(0, (sum, amount) => sum + amount);
+        final total = categoryTotals.values.fold<double>(0, (sum, a) => sum + a);
         int index = 0;
 
-        List<PieChartSectionData> sections = [];
+        final List<PieChartSectionData> sections = [];
         categoryTotals.forEach((category, amount) {
           sections.add(
             PieChartSectionData(
               value: amount,
               title: total > 0 ? '${(amount / total * 100).toStringAsFixed(0)}%' : '0%',
               color: themePalette[index % themePalette.length],
-              radius: 55, // Slightly slimmer for minimalist look
+              radius: 55,
               titleStyle: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
@@ -780,7 +827,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return PieChart(
           PieChartData(
             sections: sections,
-            sectionsSpace: 3, // Increased space for "flat" look
+            sectionsSpace: 3,
             centerSpaceRadius: 45,
           ),
         );
@@ -788,17 +835,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ✅ REFACTORED: Categories Grid
   Widget _buildCategoriesGrid() {
+    final t = AppLocalizations.of(context)!;
+
     final categories = [
-      {'name': 'Food', 'icon': Icons.restaurant, 'color': _kAccentColor},
-      {'name': 'Transport', 'icon': Icons.directions_car, 'color': _kSuccessColor},
-      {'name': 'Shopping', 'icon': Icons.shopping_bag, 'color': _kDangerColor},
-      {'name': 'Bills', 'icon': Icons.receipt, 'color': const Color(0xFFF8E16C)}, // Gold
-      {'name': 'Entertain', 'icon': Icons.movie, 'color': const Color(0xFF6B46C1)}, // Purple accent
-      {'name': 'Health', 'icon': Icons.local_hospital, 'color': const Color(0xFFE53E3E)}, // Red
-      {'name': 'Education', 'icon': Icons.school, 'color': const Color(0xFF3182CE)}, // Blue
-      {'name': 'Other', 'icon': Icons.more_horiz, 'color': const Color(0xFF718096)}, // Grey
+      {'key': 'food', 'name': t.food, 'icon': Icons.restaurant, 'color': _kAccentColor},
+      {'key': 'transport', 'name': t.transport, 'icon': Icons.directions_car, 'color': _kSuccessColor},
+      {'key': 'shopping', 'name': t.shopping, 'icon': Icons.shopping_bag, 'color': _kDangerColor},
+      {'key': 'bills', 'name': t.bills, 'icon': Icons.receipt, 'color': const Color(0xFFF8E16C)},
+      {'key': 'entertainment', 'name': t.entertainment, 'icon': Icons.movie, 'color': const Color(0xFF6B46C1)},
+      {'key': 'health', 'name': t.health, 'icon': Icons.local_hospital, 'color': const Color(0xFFE53E3E)},
+      {'key': 'education', 'name': t.education, 'icon': Icons.school, 'color': const Color(0xFF3182CE)},
+      {'key': 'other', 'name': t.other, 'icon': Icons.more_horiz, 'color': const Color(0xFF718096)},
     ];
 
     return Container(
@@ -806,13 +854,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Categories',
-            style: TextStyle(
-              fontSize: 18, 
-              fontWeight: FontWeight.bold, 
-              color: Colors.black87,
-            ),
+          Text(
+            t.categories,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
           ),
           const SizedBox(height: 16),
           GridView.builder(
@@ -822,7 +866,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               crossAxisCount: 4,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
-              childAspectRatio: 0.9, // Adjusted for label fit
+              childAspectRatio: 0.9,
             ),
             itemCount: categories.length,
             itemBuilder: (context, index) {
@@ -849,7 +893,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: catColor.withOpacity(0.12), // Subtle tint
+                          color: catColor.withOpacity(0.12),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -862,7 +906,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Text(
                         category['name'] as String,
                         style: const TextStyle(
-                          fontSize: 10, 
+                          fontSize: 10,
                           fontWeight: FontWeight.w500,
                           color: Color(0xFF4A5568),
                         ),
@@ -880,40 +924,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-Widget _buildRecentTransactions(String userId) {
+  Widget _buildRecentTransactions(String userId) {
+    final t = AppLocalizations.of(context)!;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Recent Transactions',
-                style: TextStyle(
+              Text(
+                t.recentTransactions,
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87, // 🔹 THEMED: Dark text
+                  color: Colors.black87,
                 ),
               ),
               TextButton(
                 onPressed: () {
-                  // Assuming TransactionsScreen is defined
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const TransactionsScreen()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TransactionsScreen()),
+                  );
                 },
-                child: const Text(
-                  'View All',
-                  style: TextStyle(color: _kAccentColor, fontWeight: FontWeight.w600), // 🔹 THEMED: Stormy Teal link
+                child: Text(
+                  t.viewAll,
+                  style: const TextStyle(
+                    color: _kAccentColor,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
           ),
-
           const SizedBox(height: 12),
-
-          // Transactions list
           StreamBuilder<QuerySnapshot>(
             stream: _firestore
                 .collection('users')
@@ -924,14 +971,14 @@ Widget _buildRecentTransactions(String userId) {
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator(color: _kAccentColor)); // 🔹 THEMED: Loader color
+                return const Center(child: CircularProgressIndicator(color: _kAccentColor));
               }
 
               if (snapshot.hasError) {
                 return Center(
                   child: Text(
-                    'Error loading transactions',
-                    style: TextStyle(color: _kDangerColor), // 🔹 THEMED: Coral Glow error
+                    t.errorLoadingTransactions,
+                    style: const TextStyle(color: _kDangerColor),
                   ),
                 );
               }
@@ -945,7 +992,6 @@ Widget _buildRecentTransactions(String userId) {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
-                           // 🔹 THEMED: Consistent soft shadow
                           BoxShadow(
                             color: Colors.black.withOpacity(0.04),
                             blurRadius: 8,
@@ -953,10 +999,10 @@ Widget _buildRecentTransactions(String userId) {
                           ),
                         ],
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Text(
-                          'No transactions yet',
-                          style: TextStyle(color: Color(0xFF718096)),
+                          t.noTransactionsYet,
+                          style: const TextStyle(color: Color(0xFF718096)),
                         ),
                       ),
                     ),
@@ -976,19 +1022,20 @@ Widget _buildRecentTransactions(String userId) {
                       final doc = snapshot.data!.docs[index];
                       final data = doc.data() as Map<String, dynamic>;
 
+                      final rawCategory = (data['category'] as String?) ?? 'Other';
+                      final displayCategory = _categoryLabel(t, rawCategory);
+
                       return _buildTransactionItem(
-                        data['category'] ?? 'Other',
-                        data['description'] ?? 'Transaction',
+                        rawCategory,
+                        displayCategory,
+                        (data['description'] as String?) ?? t.transaction,
                         (data['date'] as Timestamp).toDate(),
                         (data['amount'] as num?)?.toDouble() ?? 0.0,
                         data['type'] == 'income',
                       );
                     },
                   ),
-
                   const SizedBox(height: 14),
-
-                  // 👇 YOUR BUDGET CARD
                   _buildYourBudgetCard(),
                 ],
               );
@@ -999,14 +1046,16 @@ Widget _buildRecentTransactions(String userId) {
     );
   }
 
-
-  // ✅ REFACTORED: Your Budget Card (Themed link style)
   Widget _buildYourBudgetCard() {
+    final t = AppLocalizations.of(context)!;
+
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
-        // Assuming YourBudgetsScreen is defined
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const YourBudgetsScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const YourBudgetsScreen()),
+        );
       },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
@@ -1014,7 +1063,6 @@ Widget _buildRecentTransactions(String userId) {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            // 🔹 THEMED: Consistent soft shadow
             BoxShadow(
               color: Colors.black.withOpacity(0.04),
               blurRadius: 8,
@@ -1024,25 +1072,25 @@ Widget _buildRecentTransactions(String userId) {
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: const [
+          children: [
             Text(
-              'Your Budgets',
-              style: TextStyle(
+              t.yourBudgets,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Colors.black87, // Dark text
+                color: Colors.black87,
               ),
             ),
-            Icon(Icons.chevron_right, color: _kAccentColor), // 🔹 THEMED: Stormy Teal Icon
+            const Icon(Icons.chevron_right, color: _kAccentColor),
           ],
         ),
       ),
     );
   }
 
-  // ✅ REFACTORED: Transaction Item (Themed colors and flat style)
   Widget _buildTransactionItem(
-    String category,
+    String rawCategory,
+    String displayCategory,
     String description,
     DateTime date,
     double amount,
@@ -1050,33 +1098,31 @@ Widget _buildRecentTransactions(String userId) {
   ) {
     IconData icon;
     Color color;
-    final currency = context.watch<CurrencyProvider>(); 
+    final currency = context.watch<CurrencyProvider>();
 
-    // 🔹 THEMED: Use the primary/accent colors for categories
-    switch (category.toLowerCase()) {
+    switch (rawCategory.toLowerCase()) {
       case 'food':
         icon = Icons.restaurant;
-        color = _kDangerColor; // Coral Glow
+        color = _kDangerColor;
         break;
       case 'transport':
         icon = Icons.directions_car;
-        color = _kAccentColor; // Stormy Teal
+        color = _kAccentColor;
         break;
       case 'shopping':
         icon = Icons.shopping_bag;
-        color = const Color(0xFFF8E16C); // Royal Gold
+        color = const Color(0xFFF8E16C);
         break;
-      case 'income': // Special handling for income transactions
+      case 'income':
         icon = Icons.attach_money;
         color = _kSuccessColor;
         break;
       default:
         icon = Icons.category;
-        color = const Color(0xFF718096); // Grey
+        color = const Color(0xFF718096);
     }
 
-    // Determine the color for the amount text
-    final amountColor = isIncome ? _kSuccessColor : _kDangerColor; // Mint Leaf vs Coral Glow
+    final amountColor = isIncome ? _kSuccessColor : _kDangerColor;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1085,7 +1131,6 @@ Widget _buildRecentTransactions(String userId) {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          // 🔹 THEMED: Consistent soft shadow
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
             blurRadius: 8,
@@ -1095,17 +1140,15 @@ Widget _buildRecentTransactions(String userId) {
       ),
       child: Row(
         children: [
-          // Icon Container
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12), // Subtle tint background
+              color: color.withOpacity(0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(width: 16),
-          // Description and Date
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1113,29 +1156,25 @@ Widget _buildRecentTransactions(String userId) {
                 Text(
                   description,
                   style: const TextStyle(
-                    fontSize: 16, 
-                    fontWeight: FontWeight.w600, 
-                    color: Colors.black87, // Dark text
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  DateFormat('MMM dd, yyyy').format(date),
-                  style: const TextStyle(
-                    fontSize: 12, 
-                    color: Color(0xFF718096), // Subtler grey text
-                  ),
+                  '${displayCategory} • ${DateFormat('MMM dd, yyyy').format(date)}',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF718096)),
                 ),
               ],
             ),
           ),
-          // Amount
           Text(
             '${isIncome ? '+' : '-'}${currency.symbol}${amount.toStringAsFixed(2)}',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: amountColor, // Themed color
+              color: amountColor,
             ),
           ),
         ],
@@ -1145,6 +1184,7 @@ Widget _buildRecentTransactions(String userId) {
 
   Widget _buildSpeedDialOverlay() {
     if (!isExpanded) return const SizedBox.shrink();
+    final t = AppLocalizations.of(context)!;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1152,46 +1192,38 @@ Widget _buildRecentTransactions(String userId) {
       children: [
         _buildSpeedDialOption(
           Icons.add,
-          'Add Expense',
+          t.addExpense,
           const Color(0xFFF44336),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AddExpenseScreen()),
-            );
-          },
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
+          ),
         ),
         const SizedBox(height: 12),
         _buildSpeedDialOption(
           Icons.arrow_upward,
-          'Add Income',
+          t.addIncome,
           const Color(0xFF4CAF50),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AddIncomeScreen()),
-            );
-          },
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddIncomeScreen()),
+          ),
         ),
         const SizedBox(height: 12),
         _buildSpeedDialOption(
           Icons.camera_alt,
-          'Scan Receipt',
+          t.scanReceipt,
           const Color(0xFF2196F3),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ReceiptScannerScreen()),
-            );
-          },
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ReceiptScannerScreen()),
+          ),
         ),
         const SizedBox(height: 12),
       ],
     );
   }
 
-
-  // ✅ REFACTORED: Speed Dial Option (Themed shadow and label text)
   Widget _buildSpeedDialOption(
     IconData icon,
     String label,
@@ -1208,7 +1240,6 @@ Widget _buildRecentTransactions(String userId) {
             color: Colors.white,
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
-              // 🔹 THEMED: Consistent soft shadow
               BoxShadow(
                 color: Colors.black.withOpacity(0.1),
                 blurRadius: 8,
@@ -1219,9 +1250,9 @@ Widget _buildRecentTransactions(String userId) {
           child: Text(
             label,
             style: const TextStyle(
-              fontSize: 14, 
+              fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Colors.black87, // Dark text
+              color: Colors.black87,
             ),
           ),
         ),
@@ -1229,79 +1260,66 @@ Widget _buildRecentTransactions(String userId) {
         FloatingActionButton(
           heroTag: label,
           mini: true,
-          backgroundColor: color, // Uses the themed color passed in
+          backgroundColor: color,
           foregroundColor: Colors.white,
-          onPressed: () {
-            // Toggle logic remains
-            // if (isExpanded) {
-            //   setState(() {
-            //     isExpanded = false;
-            //   });
-            // }
-            onTap?.call();
-          },
+          onPressed: onTap,
           child: Icon(icon, size: 20),
         ),
       ],
     );
   }
 
-
-  // ✅ REFACTORED: Bottom Navigation Bar (Themed primary color)
   Widget _buildBottomNavigationBar() {
-    // Assuming a selectedIndex or similar state variable exists
-    const int currentIndex = 0; // Assume 'Home' is selected for styling purposes
+    const int currentIndex = 0;
 
     return BottomAppBar(
-      color: Colors.white, // Clean white background
-      surfaceTintColor: Colors.transparent, // Prevents system tinting
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
       shape: const CircularNotchedRectangle(),
       notchMargin: 8,
-      elevation: 5, // Light elevation for flat style
+      elevation: 5,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            // Home
             IconButton(
               icon: Icon(
-                Icons.home, 
-                // Set color based on index or just the primary theme color
+                Icons.home,
                 color: currentIndex == 0 ? _kAccentColor : Colors.grey.shade600,
-              ), 
+              ),
               onPressed: () {},
             ),
-            // Analytics
             IconButton(
               icon: Icon(
                 Icons.bar_chart,
                 color: currentIndex == 1 ? _kAccentColor : Colors.grey.shade600,
               ),
-              onPressed: () {
-                 Navigator.push(context, MaterialPageRoute(builder: (context) => const AnalyticsScreen()));
-              },
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AnalyticsScreen()),
+              ),
             ),
-            const SizedBox(width: 48), // Space for FAB
-            // Budgets
+            const SizedBox(width: 48),
             IconButton(
               icon: Icon(
                 Icons.account_balance_wallet_outlined,
                 color: currentIndex == 2 ? _kAccentColor : Colors.grey.shade600,
               ),
-              onPressed: () {
-                 Navigator.push(context, MaterialPageRoute(builder: (context) => const BudgetSetupScreen()));
-              },
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BudgetSetupScreen()),
+              ),
             ),
-            // Settings
             IconButton(
               icon: Icon(
                 Icons.settings,
                 color: currentIndex == 3 ? _kAccentColor : Colors.grey.shade600,
               ),
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
-              },
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              ),
             ),
           ],
         ),

@@ -3,8 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+
 import '../../models/budget_model.dart';
 import '../../provider/currency_provider.dart';
+import '../../l10n/app_localizations.dart';
 
 // --- THEME COLOR DEFINITIONS ---
 const Color kStormyTeal = Color(0xFF156064);
@@ -15,8 +17,51 @@ const Color kBackground = Color(0xFFF5F7FA);
 class YourBudgetsScreen extends StatelessWidget {
   const YourBudgetsScreen({super.key});
 
+  // ---------- Helpers ----------
+  String _categoryLabel(AppLocalizations t, String rawCategory) {
+    final c = rawCategory.trim().toLowerCase();
+    switch (c) {
+      case 'rent':
+        return t.rent;
+      case 'food':
+        return t.food;
+      case 'transport':
+        return t.transport;
+      case 'shopping':
+        return t.shopping;
+      case 'bills':
+        return t.bills;
+      case 'entertain':
+      case 'entertainment':
+        return t.entertainment;
+      case 'health':
+        return t.health;
+      case 'education':
+        return t.education;
+      case 'savings':
+        return t.savings;
+      case 'other':
+      default:
+        return t.other;
+    }
+  }
+
+  String _periodLabel(AppLocalizations t, String rawPeriodType) {
+    switch (rawPeriodType.trim().toLowerCase()) {
+      case 'monthly':
+        return t.monthly;
+      case 'daily':
+        return t.daily;
+      case 'custom':
+        return t.customDays;
+      default:
+        return rawPeriodType.toUpperCase();
+    }
+  }
+
   // Function to handle budget deletion
   void _deleteBudget(BuildContext context, String docId) async {
+    final t = AppLocalizations.of(context)!;
     final userId = FirebaseAuth.instance.currentUser!.uid;
     final firestore = FirebaseFirestore.instance;
 
@@ -27,41 +72,40 @@ class YourBudgetsScreen extends StatelessWidget {
           .collection('budgets')
           .doc(docId)
           .delete();
-      
-      // Optionally show a confirmation to the user
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Budget deleted successfully!')),
+        SnackBar(content: Text(t.budgetDeletedSuccessfully)),
       );
     } catch (e) {
-      // Show error to the user
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete budget: $e')),
+        SnackBar(content: Text('${t.failedToDeleteBudget}: $e')),
       );
     }
   }
 
   // Dialog to confirm deletion
   void _confirmDelete(BuildContext context, BudgetModel budget) {
+    final t = AppLocalizations.of(context)!;
+
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Confirm Deletion'),
+          title: Text(t.confirmDeletion),
           content: Text(
-              'Are you sure you want to delete the budget for ${budget.periodKey}? This action cannot be undone.'),
+            t.confirmDeleteBudgetMessage(budget.periodKey),
+          ),
           actions: <Widget>[
             TextButton(
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-              },
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(t.cancel, style: const TextStyle(color: Colors.grey)),
             ),
             TextButton(
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
               onPressed: () {
-                Navigator.of(dialogContext).pop(); // Close dialog
-                _deleteBudget(context, budget.docId!); // Perform deletion
+                Navigator.of(dialogContext).pop();
+                _deleteBudget(context, budget.docId!);
               },
+              child: Text(t.delete, style: const TextStyle(color: Colors.red)),
             ),
           ],
         );
@@ -69,21 +113,20 @@ class YourBudgetsScreen extends StatelessWidget {
     );
   }
 
-  // Placeholder for the Edit Dialog/Screen
+  // Placeholder Edit
   void _editBudget(BuildContext context, BudgetModel budget) {
-    // Implement your navigation to the edit screen or show an edit dialog here.
-    // For a simple placeholder, we'll show a basic alert.
+    final t = AppLocalizations.of(context)!;
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Edit Budget'),
-          content: Text(
-              'Implementing edit for budget ${budget.periodKey}. You would typically navigate to a form here.'),
+          title: Text(t.editBudget),
+          content: Text(t.editBudgetPlaceholder(budget.periodKey)),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
+              child: Text(t.close),
             ),
           ],
         );
@@ -93,6 +136,8 @@ class YourBudgetsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     final currency = context.watch<CurrencyProvider>();
     final userId = FirebaseAuth.instance.currentUser!.uid;
     final firestore = FirebaseFirestore.instance;
@@ -100,10 +145,13 @@ class YourBudgetsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: kBackground,
       appBar: AppBar(
-        title: const Text(
-          'Your Budgets',
-          style: TextStyle(
-              color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 20),
+        title: Text(
+          t.yourBudgets,
+          style: const TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
         ),
         centerTitle: true,
         backgroundColor: Colors.white,
@@ -120,16 +168,18 @@ class YourBudgetsScreen extends StatelessWidget {
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(
-                child: CircularProgressIndicator(color: kStormyTeal));
+              child: CircularProgressIndicator(color: kStormyTeal),
+            );
           }
 
           if (snapshot.data!.docs.isEmpty) {
-            return _buildEmptyState();
+            return _buildEmptyState(t);
           }
 
           final budgets = snapshot.data!.docs
-              .map((doc) => BudgetModel.fromMap(doc.data() as Map<String, dynamic>)
-                  .copyWith(docId: doc.id))
+              .map((doc) =>
+                  BudgetModel.fromMap(doc.data() as Map<String, dynamic>)
+                      .copyWith(docId: doc.id))
               .toList();
 
           return ListView.separated(
@@ -141,6 +191,8 @@ class YourBudgetsScreen extends StatelessWidget {
               return _BudgetCardWithActions(
                 budget: budget,
                 currencySymbol: currency.symbol,
+                categoryLabel: (raw) => _categoryLabel(t, raw),
+                periodLabel: (raw) => _periodLabel(t, raw),
                 onEdit: () => _editBudget(context, budget),
                 onDelete: () => _confirmDelete(context, budget),
               );
@@ -151,24 +203,28 @@ class YourBudgetsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(AppLocalizations t) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.account_balance_wallet_outlined,
-              size: 80, color: Colors.grey.shade300),
+          Icon(
+            Icons.account_balance_wallet_outlined,
+            size: 80,
+            color: Colors.grey.shade300,
+          ),
           const SizedBox(height: 16),
           Text(
-            'No budgets found',
+            t.noBudgetsFound,
             style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500),
+              fontSize: 18,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Create your first budget to get started.',
+            t.createFirstBudgetHint,
             style: TextStyle(color: Colors.grey.shade400),
           ),
         ],
@@ -184,19 +240,30 @@ class _BudgetCardWithActions extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
+  final String Function(String rawCategory) categoryLabel;
+  final String Function(String rawPeriodType) periodLabel;
+
   const _BudgetCardWithActions({
     required this.budget,
     required this.currencySymbol,
     required this.onEdit,
     required this.onDelete,
+    required this.categoryLabel,
+    required this.periodLabel,
   });
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Stack(
       children: [
-        _BudgetCard(budget: budget, currencySymbol: currencySymbol),
-        // Position the actions button
+        _BudgetCard(
+          budget: budget,
+          currencySymbol: currencySymbol,
+          categoryLabel: categoryLabel,
+          periodLabel: periodLabel,
+        ),
         Positioned(
           top: 8,
           right: 8,
@@ -209,25 +276,24 @@ class _BudgetCardWithActions extends StatelessWidget {
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'edit',
                 child: ListTile(
-                  leading: Icon(Icons.edit, color: kStormyTeal),
-                  title: Text('Edit'),
+                  leading: const Icon(Icons.edit, color: kStormyTeal),
+                  title: Text(t.edit),
                 ),
               ),
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'delete',
                 child: ListTile(
-                  leading: Icon(Icons.delete, color: Colors.red),
-                  title: Text('Delete'),
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: Text(t.delete),
                 ),
               ),
             ],
             icon: const Icon(Icons.more_vert, color: Colors.white70),
             color: Colors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           ),
         ),
       ],
@@ -239,16 +305,23 @@ class _BudgetCardWithActions extends StatelessWidget {
 class _BudgetCard extends StatelessWidget {
   final BudgetModel budget;
   final String currencySymbol;
+  final String Function(String rawCategory) categoryLabel;
+  final String Function(String rawPeriodType) periodLabel;
 
-  const _BudgetCard({required this.budget, required this.currencySymbol});
+  const _BudgetCard({
+    required this.budget,
+    required this.currencySymbol,
+    required this.categoryLabel,
+    required this.periodLabel,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // 1. Calculate Total
+    final t = AppLocalizations.of(context)!;
+
     final double totalAmount =
         budget.categoryBudget.values.fold(0.0, (sum, item) => sum + item);
 
-    // 2. Format Date (Assuming key is YYYY-MM)
     String displayDate = budget.periodKey;
     try {
       if (budget.periodKey.contains('-') && budget.periodKey.length >= 7) {
@@ -256,19 +329,19 @@ class _BudgetCard extends StatelessWidget {
         final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]));
         displayDate = DateFormat('MMMM yyyy').format(dt);
       }
-    } catch (e) {
-      // Fallback if parsing fails
+    } catch (_) {
       displayDate = budget.periodKey;
     }
 
     return GestureDetector(
-      onTap: () {if (budget.docId != null) {
-            Navigator.pop(context, budget.docId);
-          } else {
-            // Fallback/Warning if docId is somehow missing
-            debugPrint('Error: docId missing for budget ${budget.periodKey}');
-            Navigator.pop(context, budget.periodKey); 
-          }},
+      onTap: () {
+        if (budget.docId != null) {
+          Navigator.pop(context, budget.docId);
+        } else {
+          debugPrint('Error: docId missing for budget ${budget.periodKey}');
+          Navigator.pop(context, budget.periodKey);
+        }
+      },
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -283,7 +356,7 @@ class _BudgetCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // --- HEADER (Date & Total) ---
+            // --- HEADER ---
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: const BoxDecoration(
@@ -305,7 +378,7 @@ class _BudgetCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        budget.periodType.toUpperCase(),
+                        periodLabel(budget.periodType),
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.7),
                           fontSize: 12,
@@ -318,7 +391,7 @@ class _BudgetCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        'Total',
+                        t.total,
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.7),
                           fontSize: 12,
@@ -338,7 +411,7 @@ class _BudgetCard extends StatelessWidget {
               ),
             ),
 
-            // --- BODY (Categories) ---
+            // --- BODY ---
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -363,11 +436,12 @@ class _BudgetCard extends StatelessWidget {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              e.key,
+                              categoryLabel(e.key),
                               style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black87),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black87,
+                              ),
                             ),
                           ),
                           Text(
@@ -387,12 +461,12 @@ class _BudgetCard extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.touch_app, size: 16, color: Colors.grey),
-                        SizedBox(width: 5),
+                      children: [
+                        const Icon(Icons.touch_app, size: 16, color: Colors.grey),
+                        const SizedBox(width: 5),
                         Text(
-                          "Tap to apply this budget",
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                          t.tapToApplyBudget,
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                       ],
                     ),
@@ -406,7 +480,6 @@ class _BudgetCard extends StatelessWidget {
     );
   }
 
-  // Helper to give icons to categories dynamically
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
       case 'food':

@@ -1,0 +1,225 @@
+{
+  "@@locale": "ar",
+
+  "settings": "الإعدادات",
+  "general": "عام",
+  "account": "الحساب",
+  "accountSubtitle": "الملف الشخصي، كلمة المرور",
+  "language": "اللغة",
+  "currency": "العملة",
+  "logout": "تسجيل الخروج",
+
+  "appearance": "المظهر",
+  "darkMode": "الوضع الداكن",
+
+  "budgetFeatures": "ميزات الميزانية",
+  "advancedBudgetSetup": "إعداد الميزانية المتقدم",
+  "advancedBudgetSubtitle": "توقعات بالذكاء الاصطناعي وتصنيف تلقائي",
+
+  "security": "الأمان",
+  "privacySecurity": "الخصوصية والأمان",
+  "privacySecuritySubtitle": "قفل التطبيق، الأذونات",
+
+  "about": "حول",
+  "aboutApp": "حول التطبيق",
+
+  "dashboard": "لوحة التحكم",
+
+  "analytics": "التحليلات",
+  "analysis": "تحليل",
+  "graphs": "رسوم بيانية",
+  "graph": "رسم بياني",
+  "charts": "مخططات",
+  "chart": "مخطط",
+  "spendingTrends": "اتجاهات الإنفاق",
+  "incomeVsExpense": "الدخل مقابل المصروف",
+  "categoryBreakdown": "تفصيل حسب الفئة",
+  "overview": "نظرة عامة",
+  "report": "تقرير",
+  "exportReport": "تصدير التقرير",
+  "noData": "لا توجد بيانات متاحة",
+  "selectRange": "اختر النطاق",
+  "filter": "تصفية",
+  "reset": "إعادة ضبط",
+
+  "weekly": "أسبوعي",
+  "monthly": "شهري",
+  "yearly": "سنوي",
+
+  "userNotLoggedIn": "المستخدم غير مسجل الدخول. يرجى تسجيل الدخول لعرض لوحة التحكم.",
+  "user": "مستخدم",
+  "loading": "جارٍ التحميل...",
+  "welcomeBack": "مرحبًا بعودتك،",
+  "downloadPdfReport": "تحميل تقرير PDF",
+  "notifications": "الإشعارات",
+
+  "permissionDeniedTitle": "تم رفض الإذن",
+  "permissionDeniedMessage": "تحقق من قواعد أمان Firebase Firestore (users/{userId}).",
+  "errorLoadingBalance": "خطأ في تحميل الرصيد",
+  "balanceDataMissingTitle": "بيانات الرصيد غير موجودة",
+  "balanceDataMissingMessage": "تأكد من وجود مستند في users/{userId} وأن يحتوي على حقل balance.",
+  "errorLoadingStatsPermissionDenied": "خطأ في تحميل الإحصائيات (تم رفض الإذن). تحقق من قواعد transactions/{transactionId}.",
+
+  "totalBalance": "إجمالي الرصيد",
+  "income": "الدخل",
+  "expenses": "المصروفات",
+  "expense": "مصروف",
+  "savings": "الادخار",
+
+  "transactions": "المعاملات",
+  "categories": "الفئات",
+  "pendingBills": "فواتير معلّقة",
+
+  "spendingOverview": "نظرة عامة على الإنفاق",
+  "errorLoadingChartData": "خطأ في تحميل بيانات المخطط.",
+  "noExpenseDataAvailable": "لا توجد بيانات للمصروفات",
+
+  "recentTransactions": "المعاملات الأخيرة",
+  "viewAll": "عرض الكل",
+  "seeAll": "عرض الكل",
+  "errorLoadingTransactions": "خطأ في تحميل المعاملات",
+  "noTransactionsYet": "لا توجد معاملات بعد",
+  "transaction": "معاملة",
+
+  "yourBudgets": "ميزانياتك",
+
+  "addExpense": "إضافة مصروف",
+  "addIncome": "إضافة دخل",
+  "scanReceipt": "مسح الإيصال",
+
+  "title": "العنوان",
+  "amount": "المبلغ",
+  "category": "الفئة",
+  "notesOptional": "ملاحظات (اختياري)",
+  "descriptionOptional": "الوصف (اختياري)",
+
+  "enterTitle": "أدخل العنوان",
+  "enterAmount": "أدخل المبلغ",
+  "invalidNumber": "رقم غير صالح",
+  "amountMustBeGreaterThanZero": "يجب أن يكون المبلغ أكبر من 0",
+
+  "expenseFailedTitle": "فشل المصروف",
+  "expenseOverBalanceMessage": "مصروفك أكبر من الرصيد المتاح.\n\nالرصيد المتاح: {balance}\nالمصروف: {expense}\nالنقص: {diff}\n\nقلل المصروف أو أضف دخلاً أولاً.",
+  "@expenseOverBalanceMessage": {
+    "placeholders": {
+      "balance": {},
+      "expense": {},
+      "diff": {}
+    }
+  },
+
+  "ok": "حسنًا",
+  "expenseAddedSuccessfully": "تمت إضافة المصروف بنجاح",
+  "failedToAddExpense": "فشل إضافة المصروف",
+
+  "incomeAddedSuccessfully": "تمت إضافة الدخل بنجاح!",
+  "failedToAddIncome": "فشل إضافة الدخل",
+
+  "food": "طعام",
+  "transport": "مواصلات",
+  "shopping": "تسوق",
+  "bills": "فواتير",
+  "entertainment": "ترفيه",
+  "health": "صحة",
+  "education": "تعليم",
+  "other": "أخرى",
+
+  "rent": "إيجار",
+  "travel": "سفر",
+
+  "salary": "راتب",
+  "freelance": "عمل حر",
+  "business": "عمل/تجارة",
+  "bonus": "مكافأة",
+  "gift": "هدية",
+  "expenseByCategory": "المصروف حسب الفئة",
+  "dailyExpenseTrend": "اتجاه المصروف اليومي",
+  "netSavings": "صافي الادخار",
+  "noDailyExpenseData": "لا توجد بيانات للمصروف اليومي.",
+  "dayOfMonth": "يوم الشهر",
+  "need": "ضرورة",
+  "want": "رغبة",
+  "saving": "ادخار",
+
+  "notEnoughPastData": "لا توجد بيانات سابقة كافية للتنبؤ!",
+  "predictedUsing": "تم التنبؤ باستخدام آخر {count} ميزانيات",
+  "@predictedUsing": { "placeholders": { "count": {} } },
+
+  "errorPredicting": "خطأ في التنبؤ: {error}",
+  "@errorPredicting": { "placeholders": { "error": {} } },
+
+  "budgetSavedSuccessfully": "تم حفظ الميزانية بنجاح!",
+  "dynamicBudgetsTitle": "ميزانيات ديناميكية (تعديل تلقائي حسب الرصيد)",
+  "auto": "تلقائي",
+  "predictFromHistory": "التنبؤ من السجل",
+
+  "overBudgetReduce": "تجاوزت الميزانية! قلّل الإنفاق",
+  "applyAndSaveBudget": "تطبيق وحفظ الميزانية",
+
+  "balanceIsZeroHint": "رصيد لوحة التحكم يساوي 0. أضف دخلاً للحصول على توصيات.",
+  "usingDashboardBalanceHint": "استخدام رصيد لوحة التحكم (users/{uid}.balance.totalBalance) وتطبيق 50/30/20 مع توصيات حسب الفئة.",
+  "totalBalanceDashboard": "إجمالي الرصيد (لوحة التحكم): {currency} {amount}",
+  "@totalBalanceDashboard": { "placeholders": { "currency": {}, "amount": {} } },
+
+  "needsTarget": "الضروريات (الهدف: {amount})",
+  "@needsTarget": { "placeholders": { "amount": {} } },
+
+  "wantsTarget": "الرغبات (الهدف: {amount})",
+  "@wantsTarget": { "placeholders": { "amount": {} } },
+
+  "savingsTarget": "الادخار (الهدف: {amount})",
+  "@savingsTarget": { "placeholders": { "amount": {} } },
+
+  "budgetDocNotFound": "خطأ: لم يتم العثور على مستند الميزانية للتعديل.",
+  "editingBudget": "جارٍ تعديل الميزانية: {periodKey}",
+  "@editingBudget": { "placeholders": { "periodKey": {} } },
+
+  "enterAtLeastOneCategoryBudget": "يرجى إدخال ميزانية فئة واحدة على الأقل",
+  "budgetAlreadyExistsLoadToEdit": "توجد ميزانية لهذه الفترة بالفعل. قم بتحميلها للتعديل.",
+  "budgetUpdated": "تم تحديث الميزانية",
+  "budgetCreated": "تم إنشاء الميزانية",
+  "budgetDeleted": "تم حذف الميزانية",
+
+  "editBudget": "تعديل الميزانية",
+  "setBudget": "تعيين ميزانية",
+  "categoryBudgets": "ميزانيات الفئات",
+  "updateBudget": "تحديث الميزانية",
+  "saveBudget": "حفظ الميزانية",
+  "deleteBudget": "حذف الميزانية",
+  "viewEditOldBudgets": "عرض/تعديل الميزانيات السابقة",
+
+  "budgetPeriod": "فترة الميزانية",
+  "daily": "يومي",
+  "customDays": "أيام مخصصة",
+  "numberOfDays": "عدد الأيام",
+
+  "currencyPrefix": "Rs ",
+
+  "budgetDeletedSuccessfully": "تم حذف الميزانية بنجاح!",
+  "failedToDeleteBudget": "فشل حذف الميزانية: {error}",
+  "@failedToDeleteBudget": { "placeholders": { "error": {} } },
+
+  "confirmDeletion": "تأكيد الحذف",
+  "confirmDeleteBudgetMessage": "هل أنت متأكد أنك تريد حذف ميزانية {periodKey}؟ لا يمكن التراجع عن هذا الإجراء.",
+  "@confirmDeleteBudgetMessage": { "placeholders": { "periodKey": {} } },
+
+  "cancel": "إلغاء",
+  "delete": "حذف",
+  "close": "إغلاق",
+
+  "editBudgetPlaceholder": "يجري تنفيذ تعديل الميزانية {periodKey}. عادةً ستنتقل إلى نموذج هنا.",
+  "@editBudgetPlaceholder": { "placeholders": { "periodKey": {} } },
+
+  "noBudgetsFound": "لم يتم العثور على ميزانيات",
+  "createFirstBudgetHint": "أنشئ أول ميزانية للبدء.",
+
+  "edit": "تعديل",
+  "total": "الإجمالي",
+  "tapToApplyBudget": "اضغط لتطبيق هذه الميزانية",
+  "balanceIsZeroHint": "إجمالي الرصيد في لوحة التحكم يساوي 0. أضف دخلاً للحصول على توصيات.",
+  "usingDashboardBalanceHint": "استخدام إجمالي رصيد لوحة التحكم (users/{uid}.balance.totalBalance) وتطبيق 50/30/20 مع توصيات حسب الفئة.",
+
+  "permissionDeniedMessage": "تحقق من قواعد أمان Firebase Firestore (users/{userId}).",
+  "balanceDataMissingMessage": "تأكد من وجود مستند في users/{userId} وأنه يحتوي على حقل balance من نوع map.",
+  "errorLoadingStatsPermissionDenied": "خطأ في تحميل الإحصائيات (Permission Denied). تحقق من القواعد لـ transactions/{transactionId}."
+}

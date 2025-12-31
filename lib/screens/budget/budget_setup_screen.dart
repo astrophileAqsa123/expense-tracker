@@ -1,23 +1,23 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'your_budget_screen.dart'; // Import the YourBudgetsScreen
+
+import '../../l10n/app_localizations.dart';
+import 'your_budget_screen.dart';
 
 // --- THEME COLOR DEFINITIONS ---
-const Color kStormyTeal = Color(0xFF156064); 
-const Color kCoralGlow = Color(0xFFFB8F67); 
-const Color _kAccentColor = kStormyTeal; 
+const Color kStormyTeal = Color(0xFF156064);
+const Color kCoralGlow = Color(0xFFFB8F67);
+const Color _kAccentColor = kStormyTeal;
 const Color _kDangerColor = kCoralGlow;
 // -------------------------------
 
-/// ---------------- ENUM ----------------
 enum BudgetPeriodType {
   monthly,
   daily,
   custom,
 }
 
-/// ---------------- SCREEN ----------------
 class BudgetSetupScreen extends StatefulWidget {
   const BudgetSetupScreen({super.key});
 
@@ -26,7 +26,6 @@ class BudgetSetupScreen extends StatefulWidget {
 }
 
 class _BudgetSetupScreenState extends State<BudgetSetupScreen> {
-  // ... (existing state variables)
   bool loading = false;
   bool isEditMode = false;
 
@@ -37,6 +36,7 @@ class _BudgetSetupScreenState extends State<BudgetSetupScreen> {
   final Map<String, TextEditingController> categoryControllers = {};
   final Map<String, double> categoryBudget = {};
 
+  // NOTE: Internal raw keys (do NOT translate these)
   final List<String> categories = [
     "Rent",
     "Food",
@@ -64,122 +64,108 @@ class _BudgetSetupScreenState extends State<BudgetSetupScreen> {
     }
     super.dispose();
   }
-  // ... (existing _generatePeriodKey, _loadExistingBudget, _saveBudget, _deleteBudget, _toast methods)
+
   // ---------------- PERIOD KEY ----------------
   String _generatePeriodKey(DateTime now) {
     switch (selectedPeriod) {
       case BudgetPeriodType.monthly:
         return "${now.year}-${now.month.toString().padLeft(2, '0')}";
-
       case BudgetPeriodType.daily:
         return "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-
       case BudgetPeriodType.custom:
         return "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}_${customDays}days";
     }
   }
 
-// In budget_setup_screen.dart
+  // ---------------- LOAD EXISTING ----------------
+  Future<void> _loadExistingBudget(String docId) async {
+    final t = AppLocalizations.of(context)!;
 
-// ---------------- LOAD EXISTING ----------------
-// Renaming the parameter to docId to be clearer about its purpose
-Future<void> _loadExistingBudget(String docId) async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-  final doc = await FirebaseFirestore.instance
-      .collection("users")
-      .doc(user.uid)
-      .collection("budgets")
-      // *** FIX 2: Use docId (which is the result from the previous screen) ***
-      .doc(docId) 
-      .get();
-      
-  // Add a check in case the document wasn't found
-  if (!doc.exists || doc.data() == null) {
-    _toast("Error: Budget document not found for editing.");
-    return;
+    final doc = await FirebaseFirestore.instance
+        .collection("users")
+        .doc(user.uid)
+        .collection("budgets")
+        .doc(docId)
+        .get();
+
+    if (!doc.exists || doc.data() == null) {
+      _toast(t.budgetDocNotFound);
+      return;
+    }
+
+    final data = doc.data()!;
+
+    for (final c in categoryControllers.values) {
+      c.text = "";
+    }
+
+    final Map<String, dynamic> map =
+        Map<String, dynamic>.from(data['categoryBudget'] ?? {});
+
+    for (final cat in categories) {
+      final amount = map[cat];
+      if (amount != null) {
+        categoryControllers[cat]!.text = amount.toString();
+      } else {
+        categoryControllers[cat]!.text = "";
+      }
+    }
+
+    BudgetPeriodType loadedPeriodType;
+    switch (data['periodType']) {
+      case 'monthly':
+        loadedPeriodType = BudgetPeriodType.monthly;
+        break;
+      case 'daily':
+        loadedPeriodType = BudgetPeriodType.daily;
+        break;
+      case 'custom':
+        loadedPeriodType = BudgetPeriodType.custom;
+        break;
+      default:
+        loadedPeriodType = BudgetPeriodType.monthly;
+    }
+
+    setState(() {
+      isEditMode = true;
+      editingBudgetKey = docId;
+      selectedPeriod = loadedPeriodType;
+      customDays = data['periodDays'] ?? 7;
+    });
+
+    _toast("${t.editingBudget}: ${data['periodKey'] ?? docId}");
   }
 
-  final data = doc.data()!;
-  
-  // Ensure all controllers are reset if we are loading a new budget key
-  for (final c in categoryControllers.values) {
-    c.text = "";
-  }
+  // ---------------- VIEW OLD ----------------
+  Future<void> _viewOldBudgets() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const YourBudgetsScreen()),
+    );
 
-  // ... (rest of the loading logic is fine) ...
-  final Map<String, dynamic> map =
-      Map<String, dynamic>.from(data['categoryBudget']);
-
-  for (final cat in categories) {
-    // This line should correctly populate the text field controllers
-    final amount = map[cat];
-    if (amount != null) {
-      // Use toStringAsFixed(0) or just toString() for clean display, 
-      // ensuring it's a string.
-      categoryControllers[cat]!.text = amount.toString();
-    } else {
-       categoryControllers[cat]!.text = "";
+    if (result is String) {
+      await _loadExistingBudget(result);
     }
   }
 
-  // Determine the period type from the loaded data for display purposes
-  BudgetPeriodType loadedPeriodType;
-  switch(data['periodType']) {
-    case 'monthly':
-      loadedPeriodType = BudgetPeriodType.monthly;
-      break;
-    case 'daily':
-      loadedPeriodType = BudgetPeriodType.daily;
-      break;
-    case 'custom':
-      loadedPeriodType = BudgetPeriodType.custom;
-      break;
-    default:
-      loadedPeriodType = BudgetPeriodType.monthly;
-  }
-
-
-  setState(() {
-    isEditMode = true;
-    // Set the editingBudgetKey to the docId for delete/save operations
-    editingBudgetKey = docId; 
-    selectedPeriod = loadedPeriodType; // Update the selector
-    customDays = data['periodDays'] ?? 7;
-  });
-
-  _toast("Editing budget: ${data['periodKey'] ?? docId}");
-}
-
-// And update the _viewOldBudgets function to pass the result correctly:
-// 🌟 NEW: Function to handle navigation to YourBudgetsScreen
-Future<void> _viewOldBudgets() async {
-  final result = await Navigator.push(
-   context,
-   MaterialPageRoute(builder: (context) => const YourBudgetsScreen()),
-  );
-  
-  // result is now the Firestore docId
-  if (result is String) {
-   // Do not update state here, _loadExistingBudget will call setState
-   await _loadExistingBudget(result); 
-  } 
-}
   // ---------------- SAVE ----------------
   Future<void> _saveBudget() async {
+    final t = AppLocalizations.of(context)!;
+
     categoryBudget.clear();
 
     for (final cat in categories) {
-      final value =
-          double.tryParse(categoryControllers[cat]!.text.trim());
+      final value = double.tryParse(categoryControllers[cat]!.text.trim());
       if (value != null && value > 0) {
         categoryBudget[cat] = value;
       }
     }
 
     if (categoryBudget.isEmpty) {
-      _toast("Please enter at least one category budget");
+      _toast(t.enterAtLeastOneCategoryBudget);
       return;
     }
 
@@ -187,20 +173,24 @@ Future<void> _viewOldBudgets() async {
     if (user == null) return;
 
     final now = DateTime.now();
-    final periodKey = editingBudgetKey ?? _generatePeriodKey(now); // Use existing key if editing
+
+    // Keep your existing logic:
+    // - if edit mode => must save into same docId
+    // - else => generate new periodKey docId
+    final docId = editingBudgetKey ?? _generatePeriodKey(now);
+    final periodKey = docId;
 
     final docRef = FirebaseFirestore.instance
         .collection("users")
         .doc(user.uid)
         .collection("budgets")
-        .doc(periodKey);
+        .doc(docId);
 
     if (!isEditMode) {
       final exists = await docRef.get();
       if (exists.exists) {
-        // Prevent accidental overwrite if not explicitly editing
-        _toast("Budget for this period already exists. Load it to edit.");
-        await _loadExistingBudget(periodKey);
+        _toast(t.budgetAlreadyExistsLoadToEdit);
+        await _loadExistingBudget(docId);
         return;
       }
     }
@@ -209,8 +199,7 @@ Future<void> _viewOldBudgets() async {
 
     await docRef.set({
       "periodType": selectedPeriod.name,
-      "periodDays":
-          selectedPeriod == BudgetPeriodType.custom ? customDays : null,
+      "periodDays": selectedPeriod == BudgetPeriodType.custom ? customDays : null,
       "periodKey": periodKey,
       "categoryBudget": categoryBudget,
       "updatedAt": FieldValue.serverTimestamp(),
@@ -218,12 +207,14 @@ Future<void> _viewOldBudgets() async {
 
     setState(() => loading = false);
 
-    _toast(isEditMode ? "Budget updated" : "Budget created");
-    Navigator.pop(context);
+    _toast(isEditMode ? t.budgetUpdated : t.budgetCreated);
+    if (mounted) Navigator.pop(context);
   }
 
   // ---------------- DELETE ----------------
   Future<void> _deleteBudget() async {
+    final t = AppLocalizations.of(context)!;
+
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || editingBudgetKey == null) return;
 
@@ -234,24 +225,47 @@ Future<void> _viewOldBudgets() async {
         .doc(editingBudgetKey!)
         .delete();
 
-    _toast("Budget deleted");
-    Navigator.pop(context);
+    _toast(t.budgetDeleted);
+    if (mounted) Navigator.pop(context);
   }
-  
+
+  // ---------------- CATEGORY LABEL ----------------
+  String _catLabel(AppLocalizations t, String raw) {
+    switch (raw.trim().toLowerCase()) {
+      case 'rent':
+        return t.rent;
+      case 'food':
+        return t.food;
+      case 'transport':
+        return t.transport;
+      case 'bills':
+        return t.bills;
+      case 'health':
+        return t.health;
+      case 'education':
+        return t.education;
+      case 'shopping':
+        return t.shopping;
+      case 'entertainment':
+        return t.entertainment;
+      case 'other':
+      default:
+        return t.other;
+    }
+  }
+
   // ---------------- UI ----------------
-  // 🌟 NEW: Function to handle navigation to YourBudgetsScreen
-
-
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Scaffold(
-      // 🔹 THEMED APP BAR
       appBar: AppBar(
         title: Text(
-          isEditMode ? "Edit Budget" : "Set Budget",
+          isEditMode ? t.editBudget : t.setBudget,
           style: const TextStyle(color: Colors.white),
         ),
-        backgroundColor: _kAccentColor, // Stormy Teal
+        backgroundColor: _kAccentColor,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: loading
@@ -259,21 +273,20 @@ Future<void> _viewOldBudgets() async {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // 🌟 NEW: View Old Budgets Button
-                _buildViewOldBudgetsButton(),
+                _buildViewOldBudgetsButton(t),
                 const SizedBox(height: 16),
-                _buildPeriodSelector(),
+                _buildPeriodSelector(t),
                 const SizedBox(height: 24),
-                const Text(
-                  "Category Budgets",
-                  style: TextStyle(
+                Text(
+                  t.categoryBudgets,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
                 ),
                 const SizedBox(height: 8),
-                ...categories.map(_buildCategoryTile).toList(),
+                ...categories.map((c) => _buildCategoryTile(t, c)).toList(),
                 const SizedBox(height: 80),
               ],
             ),
@@ -282,25 +295,26 @@ Future<void> _viewOldBudgets() async {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 🔹 THEMED SAVE BUTTON
             ElevatedButton(
               onPressed: loading ? null : _saveBudget,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _kAccentColor, // Stormy Teal
+                backgroundColor: _kAccentColor,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 minimumSize: const Size(double.infinity, 50),
               ),
-              child: Text(isEditMode ? "Update Budget" : "Save Budget", style: const TextStyle(fontSize: 16)),
+              child: Text(
+                isEditMode ? t.updateBudget : t.saveBudget,
+                style: const TextStyle(fontSize: 16),
+              ),
             ),
             if (isEditMode)
-              // 🔹 THEMED DELETE BUTTON
               TextButton(
                 onPressed: _deleteBudget,
-                child: const Text(
-                  "Delete Budget",
-                  style: TextStyle(color: _kDangerColor), // Coral Glow for danger
+                child: Text(
+                  t.deleteBudget,
+                  style: const TextStyle(color: _kDangerColor),
                 ),
               ),
           ],
@@ -310,15 +324,15 @@ Future<void> _viewOldBudgets() async {
   }
 
   // ---------------- VIEW OLD BUTTON ----------------
-  Widget _buildViewOldBudgetsButton() {
+  Widget _buildViewOldBudgetsButton(AppLocalizations t) {
     return SizedBox(
       height: 40,
       child: OutlinedButton.icon(
         onPressed: _viewOldBudgets,
         icon: const Icon(Icons.history, size: 20),
-        label: const Text("View/Edit Old Budgets"),
+        label: Text(t.viewEditOldBudgets),
         style: OutlinedButton.styleFrom(
-          foregroundColor: _kAccentColor, // Stormy Teal
+          foregroundColor: _kAccentColor,
           side: const BorderSide(color: _kAccentColor, width: 1.5),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
@@ -327,7 +341,7 @@ Future<void> _viewOldBudgets() async {
   }
 
   // ---------------- PERIOD SELECTOR ----------------
-  Widget _buildPeriodSelector() {
+  Widget _buildPeriodSelector(AppLocalizations t) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -336,10 +350,11 @@ Future<void> _viewOldBudgets() async {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Budget Period",
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+            Text(
+              t.budgetPeriod,
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+            ),
             const SizedBox(height: 12),
-            // 🔹 THEMED DROPDOWN
             DropdownButtonFormField<BudgetPeriodType>(
               value: selectedPeriod,
               decoration: InputDecoration(
@@ -349,23 +364,25 @@ Future<void> _viewOldBudgets() async {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              items: const [
+              items: [
                 DropdownMenuItem(
-                    value: BudgetPeriodType.monthly,
-                    child: Text("Monthly")),
+                  value: BudgetPeriodType.monthly,
+                  child: Text(t.monthly),
+                ),
                 DropdownMenuItem(
-                    value: BudgetPeriodType.daily, child: Text("Daily")),
+                  value: BudgetPeriodType.daily,
+                  child: Text(t.daily),
+                ),
                 DropdownMenuItem(
-                    value: BudgetPeriodType.custom,
-                    child: Text("Custom Days")),
+                  value: BudgetPeriodType.custom,
+                  child: Text(t.customDays),
+                ),
               ],
               onChanged: (v) {
                 setState(() {
                   selectedPeriod = v!;
-                  // Reset edit mode when changing period type
                   isEditMode = false;
                   editingBudgetKey = null;
-                  // Clear controllers to start fresh
                   for (final c in categoryControllers.values) {
                     c.clear();
                   }
@@ -374,12 +391,11 @@ Future<void> _viewOldBudgets() async {
             ),
             if (selectedPeriod == BudgetPeriodType.custom) ...[
               const SizedBox(height: 12),
-              // 🔹 THEMED TEXT FIELD
               TextField(
                 keyboardType: TextInputType.number,
                 controller: TextEditingController(text: customDays.toString()),
                 decoration: InputDecoration(
-                  labelText: "Number of days",
+                  labelText: t.numberOfDays,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   focusedBorder: const OutlineInputBorder(
                     borderSide: BorderSide(color: _kAccentColor, width: 2),
@@ -397,23 +413,22 @@ Future<void> _viewOldBudgets() async {
   }
 
   // ---------------- CATEGORY TILE ----------------
-  Widget _buildCategoryTile(String category) {
+  Widget _buildCategoryTile(AppLocalizations t, String category) {
     return Card(
       elevation: 1,
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
-        title: Text(category, style: const TextStyle(color: Colors.black87)),
+        title: Text(_catLabel(t, category), style: const TextStyle(color: Colors.black87)),
         trailing: SizedBox(
           width: 120,
-          // 🔹 THEMED TEXT FIELD
           child: TextField(
             controller: categoryControllers[category],
             keyboardType: TextInputType.number,
             textAlign: TextAlign.right,
             style: const TextStyle(fontWeight: FontWeight.bold),
-            decoration: const InputDecoration(
-              prefixText: "Rs ",
+            decoration: InputDecoration(
+              prefixText: t.currencyPrefix,
               border: InputBorder.none,
               contentPadding: EdgeInsets.zero,
             ),
@@ -425,7 +440,6 @@ Future<void> _viewOldBudgets() async {
 
   // ---------------- TOAST ----------------
   void _toast(String msg) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 }

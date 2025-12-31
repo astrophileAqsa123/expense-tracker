@@ -1,0 +1,13 @@
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+preferred-supported-locales:
+  - en
+  - ur
+  - hi
+  - es
+  - ar
+
+# ✅ This will generate a report of missing translations
+untranslated-messages-file: lib/l10n/untranslated.txt

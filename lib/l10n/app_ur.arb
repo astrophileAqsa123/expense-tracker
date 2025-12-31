@@ -1,0 +1,225 @@
+{
+  "@@locale": "ur",
+
+  "settings": "سیٹنگز",
+  "general": "عمومی",
+  "account": "اکاؤنٹ",
+  "accountSubtitle": "پروفائل، پاس ورڈ",
+  "language": "زبان",
+  "currency": "کرنسی",
+  "logout": "لاگ آؤٹ",
+
+  "appearance": "ظاہری شکل",
+  "darkMode": "ڈارک موڈ",
+
+  "budgetFeatures": "بجٹ فیچرز",
+  "advancedBudgetSetup": "ایڈوانس بجٹ سیٹ اپ",
+  "advancedBudgetSubtitle": "AI پیشن گوئی اور آٹو کیٹیگری",
+
+  "security": "سیکیورٹی",
+  "privacySecurity": "پرائیویسی اور سیکیورٹی",
+  "privacySecuritySubtitle": "ایپ لاک، پرمیشنز",
+
+  "about": "متعلق",
+  "aboutApp": "ایپ کے بارے میں",
+
+  "dashboard": "ڈیش بورڈ",
+
+  "analytics": "اینالیٹکس",
+  "analysis": "تجزیہ",
+  "graphs": "گراف",
+  "graph": "گراف",
+  "charts": "چارٹس",
+  "chart": "چارٹ",
+  "spendingTrends": "خرچ کے رجحانات",
+  "incomeVsExpense": "آمدنی بمقابلہ خرچ",
+  "categoryBreakdown": "کیٹیگری کے لحاظ سے تقسیم",
+  "overview": "جائزہ",
+  "report": "رپورٹ",
+  "exportReport": "رپورٹ ایکسپورٹ کریں",
+  "noData": "کوئی ڈیٹا دستیاب نہیں",
+  "selectRange": "رینج منتخب کریں",
+  "filter": "فلٹر",
+  "reset": "ری سیٹ",
+
+  "weekly": "ہفتہ وار",
+  "monthly": "ماہانہ",
+  "yearly": "سالانہ",
+
+  "userNotLoggedIn": "یوزر لاگ اِن نہیں ہے۔ ڈیش بورڈ دیکھنے کے لیے لاگ اِن کریں۔",
+  "user": "یوزر",
+  "loading": "لوڈ ہو رہا ہے...",
+  "welcomeBack": "خوش آمدید،",
+  "downloadPdfReport": "پی ڈی ایف رپورٹ ڈاؤن لوڈ کریں",
+  "notifications": "نوٹیفکیشنز",
+
+  "permissionDeniedTitle": "اجازت مسترد",
+  "permissionDeniedMessage": "Firebase Firestore کے سیکیورٹی رولز چیک کریں (users/{userId}).",
+  "errorLoadingBalance": "بیلنس لوڈ کرنے میں خرابی",
+  "balanceDataMissingTitle": "بیلنس ڈیٹا موجود نہیں",
+  "balanceDataMissingMessage": "یقینی بنائیں کہ users/{userId} پر ڈاکیومنٹ موجود ہے اور اس میں balance فیلڈ ہے۔",
+  "errorLoadingStatsPermissionDenied": "اسٹیٹس لوڈ کرنے میں خرابی (اجازت مسترد)۔ transactions/{transactionId} کے رولز چیک کریں۔",
+
+  "totalBalance": "کل بیلنس",
+  "income": "آمدنی",
+  "expenses": "اخراجات",
+  "expense": "خرچ",
+  "savings": "بچت",
+
+  "transactions": "لین دین",
+  "categories": "کیٹیگریز",
+  "pendingBills": "زیرِ التواء بلز",
+
+  "spendingOverview": "اخراجات کا جائزہ",
+  "errorLoadingChartData": "چارٹ ڈیٹا لوڈ کرنے میں خرابی۔",
+  "noExpenseDataAvailable": "کوئی خرچ ڈیٹا دستیاب نہیں",
+
+  "recentTransactions": "حالیہ لین دین",
+  "viewAll": "سب دیکھیں",
+  "seeAll": "سب دیکھیں",
+  "errorLoadingTransactions": "لین دین لوڈ کرنے میں خرابی",
+  "noTransactionsYet": "ابھی کوئی لین دین نہیں",
+  "transaction": "لین دین",
+
+  "yourBudgets": "آپ کے بجٹس",
+
+  "addExpense": "خرچ شامل کریں",
+  "addIncome": "آمدنی شامل کریں",
+  "scanReceipt": "رسید اسکین کریں",
+
+  "title": "عنوان",
+  "amount": "رقم",
+  "category": "کیٹیگری",
+  "notesOptional": "نوٹس (اختیاری)",
+  "descriptionOptional": "تفصیل (اختیاری)",
+
+  "enterTitle": "عنوان درج کریں",
+  "enterAmount": "رقم درج کریں",
+  "invalidNumber": "غلط نمبر",
+  "amountMustBeGreaterThanZero": "رقم 0 سے زیادہ ہونی چاہیے",
+
+  "expenseFailedTitle": "خرچ ناکام",
+  "expenseOverBalanceMessage": "آپ کا خرچ دستیاب بیلنس سے زیادہ ہے۔\n\nدستیاب بیلنس: {balance}\nخرچ: {expense}\nکمی: {diff}\n\nبراہ کرم خرچ کم کریں یا پہلے آمدنی شامل کریں۔",
+  "@expenseOverBalanceMessage": {
+    "placeholders": {
+      "balance": {},
+      "expense": {},
+      "diff": {}
+    }
+  },
+
+  "ok": "ٹھیک ہے",
+  "expenseAddedSuccessfully": "خرچ کامیابی سے شامل ہوگیا",
+  "failedToAddExpense": "خرچ شامل کرنے میں ناکامی",
+
+  "incomeAddedSuccessfully": "آمدنی کامیابی سے شامل ہوگئی!",
+  "failedToAddIncome": "آمدنی شامل کرنے میں ناکامی",
+
+  "food": "کھانا",
+  "transport": "ٹرانسپورٹ",
+  "shopping": "خریداری",
+  "bills": "بلز",
+  "entertainment": "تفریح",
+  "health": "صحت",
+  "education": "تعلیم",
+  "other": "دیگر",
+
+  "rent": "کرایہ",
+  "travel": "سفر",
+
+  "salary": "تنخواہ",
+  "freelance": "فری لانس",
+  "business": "کاروبار",
+  "bonus": "بونس",
+  "gift": "تحفہ",
+  "expenseByCategory": "کیٹیگری کے لحاظ سے خرچ",
+  "dailyExpenseTrend": "روزانہ خرچ کا رجحان",
+  "netSavings": "خالص بچت",
+  "noDailyExpenseData": "روزانہ خرچ کا کوئی ڈیٹا نہیں۔",
+  "dayOfMonth": "مہینے کا دن",
+  "need": "ضرورت",
+  "want": "خواہش",
+  "saving": "بچت",
+
+  "notEnoughPastData": "پیش گوئی کے لیے کافی پرانا ڈیٹا نہیں!",
+  "predictedUsing": "پچھلے {count} بجٹس کی بنیاد پر پیش گوئی کی گئی",
+  "@predictedUsing": { "placeholders": { "count": {} } },
+
+  "errorPredicting": "پیش گوئی میں خرابی: {error}",
+  "@errorPredicting": { "placeholders": { "error": {} } },
+
+  "budgetSavedSuccessfully": "بجٹ کامیابی سے محفوظ ہوگیا!",
+  "dynamicBudgetsTitle": "ڈائنامک بجٹس (بیلنس کے مطابق خودکار ایڈجسٹ)",
+  "auto": "آٹو",
+  "predictFromHistory": "ہسٹری سے پیش گوئی",
+
+  "overBudgetReduce": "بجٹ سے زیادہ! خرچ کم کریں",
+  "applyAndSaveBudget": "اپلائی اور بجٹ محفوظ کریں",
+
+  "balanceIsZeroHint": "ڈیش بورڈ کا کل بیلنس 0 ہے۔ سفارشات کے لیے آمدنی شامل کریں۔",
+  "usingDashboardBalanceHint": "ڈیش بورڈ کے کل بیلنس (users/{uid}.balance.totalBalance) پر 50/30/20 اور سفارشات لاگو کی جا رہی ہیں۔",
+  "totalBalanceDashboard": "کل بیلنس (ڈیش بورڈ): {currency} {amount}",
+  "@totalBalanceDashboard": { "placeholders": { "currency": {}, "amount": {} } },
+
+  "needsTarget": "ضروریات (ہدف: {amount})",
+  "@needsTarget": { "placeholders": { "amount": {} } },
+
+  "wantsTarget": "خواہشات (ہدف: {amount})",
+  "@wantsTarget": { "placeholders": { "amount": {} } },
+
+  "savingsTarget": "بچت (ہدف: {amount})",
+  "@savingsTarget": { "placeholders": { "amount": {} } },
+
+  "budgetDocNotFound": "خرابی: ایڈٹ کے لیے بجٹ ڈاکیومنٹ نہیں ملا۔",
+  "editingBudget": "بجٹ ایڈٹ ہو رہا ہے: {periodKey}",
+  "@editingBudget": { "placeholders": { "periodKey": {} } },
+
+  "enterAtLeastOneCategoryBudget": "کم از کم ایک کیٹیگری بجٹ درج کریں",
+  "budgetAlreadyExistsLoadToEdit": "اس مدت کا بجٹ پہلے سے موجود ہے۔ ایڈٹ کے لیے لوڈ کریں۔",
+  "budgetUpdated": "بجٹ اپڈیٹ ہوگیا",
+  "budgetCreated": "بجٹ بن گیا",
+  "budgetDeleted": "بجٹ حذف ہوگیا",
+
+  "editBudget": "بجٹ ایڈٹ کریں",
+  "setBudget": "بجٹ سیٹ کریں",
+  "categoryBudgets": "کیٹیگری بجٹس",
+  "updateBudget": "بجٹ اپڈیٹ کریں",
+  "saveBudget": "بجٹ محفوظ کریں",
+  "deleteBudget": "بجٹ حذف کریں",
+  "viewEditOldBudgets": "پرانے بجٹس دیکھیں/ایڈٹ کریں",
+
+  "budgetPeriod": "بجٹ کی مدت",
+  "daily": "روزانہ",
+  "customDays": "اپنی مرضی کے دن",
+  "numberOfDays": "دنوں کی تعداد",
+
+  "currencyPrefix": "Rs ",
+
+  "budgetDeletedSuccessfully": "بجٹ کامیابی سے حذف ہوگیا!",
+  "failedToDeleteBudget": "بجٹ حذف کرنے میں ناکامی: {error}",
+  "@failedToDeleteBudget": { "placeholders": { "error": {} } },
+
+  "confirmDeletion": "حذف کرنے کی تصدیق",
+  "confirmDeleteBudgetMessage": "کیا آپ واقعی {periodKey} کے بجٹ کو حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں ہوگا۔",
+  "@confirmDeleteBudgetMessage": { "placeholders": { "periodKey": {} } },
+
+  "cancel": "کینسل",
+  "delete": "حذف کریں",
+  "close": "بند کریں",
+
+  "editBudgetPlaceholder": "{periodKey} کے بجٹ کی ایڈٹ فیچر ابھی بنانی ہے۔ عموماً یہاں فارم کی طرف جائیں گے۔",
+  "@editBudgetPlaceholder": { "placeholders": { "periodKey": {} } },
+
+  "noBudgetsFound": "کوئی بجٹ نہیں ملا",
+  "createFirstBudgetHint": "شروع کرنے کے لیے اپنا پہلا بجٹ بنائیں۔",
+
+  "edit": "ایڈٹ",
+  "total": "کل",
+  "tapToApplyBudget": "یہ بجٹ لاگو کرنے کے لیے ٹیپ کریں",
+  "balanceIsZeroHint": "ڈیش بورڈ کا کل بیلنس 0 ہے۔ سفارشات کے لیے آمدنی شامل کریں۔",
+  "usingDashboardBalanceHint": "ڈیش بورڈ کے کل بیلنس (users/{uid}.balance.totalBalance) پر 50/30/20 اور کیٹیگری سفارشات لاگو کی جا رہی ہیں۔",
+
+  "permissionDeniedMessage": "اپنے Firebase Firestore سیکیورٹی رولز چیک کریں (users/{userId}).",
+  "balanceDataMissingMessage": "یقینی بنائیں کہ users/{userId} پر ڈاکیومنٹ موجود ہے اور اس میں balance map فیلڈ موجود ہے۔",
+  "errorLoadingStatsPermissionDenied": "اعداد و شمار لوڈ کرنے میں خرابی (Permission Denied). transactions/{transactionId} کے رولز چیک کریں۔"
+}

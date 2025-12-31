@@ -31,10 +31,10 @@ class _SplashScreenState extends State<SplashScreen> {
       final user = FirebaseAuth.instance.currentUser;
 
       if (user != null) {
-        // ✅ already logged in
+    
         Navigator.pushReplacementNamed(context, "/dashboard");
       } else {
-        // ❌ not logged in
+   
         Navigator.pushReplacementNamed(context, "/login");
       }
     });

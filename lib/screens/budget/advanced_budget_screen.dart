@@ -1,15 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../models/user_model.dart';
 import '../../models/budget_model.dart';
+import '../../l10n/app_localizations.dart';
 
-// ---------- THEME COLORS ----------
 const Color kAccentColor = Color(0xFF156064);
 const Color kSuccessColor = Color(0xFF00C49A);
 const Color kDangerColor = Color(0xFFFB8F67);
-// ----------------------------------
 
 class AdvancedBudgetScreen extends StatefulWidget {
   const AdvancedBudgetScreen({super.key});
@@ -22,12 +23,19 @@ enum BudgetType { need, want, saving }
 
 class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
   bool _loading = true;
-  bool _predicting = false; // State to show prediction loading
+  bool _predicting = false;
 
   UserModel? _user;
+
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSub;
+
   final Map<String, TextEditingController> _controllers = {};
 
-  // --- 50/30/20 Structure ---
+  bool _dynamicBudgets = true;
+
+  double _totalBalance = 0.0;
+  double? _lastTotalBalance;
+
   final Map<String, BudgetType> _budgetStructure = {
     'Food': BudgetType.need,
     'Transport': BudgetType.need,
@@ -39,83 +47,187 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
     'Other': BudgetType.want,
   };
 
+  final Map<String, double> _needWeights = {
+    'Bills': 0.35,
+    'Food': 0.28,
+    'Transport': 0.15,
+    'Health': 0.12,
+    'Education': 0.10,
+  };
+
+  final Map<String, double> _wantWeights = {
+    'Shopping': 0.50,
+    'Entertain': 0.30,
+    'Other': 0.20,
+  };
+
   List<String> get _categories => _budgetStructure.keys.toList();
 
-  // ---------------- INIT ----------------
+  String _fixed0(num? v) => ((v ?? 0).toDouble()).toStringAsFixed(0);
+
+  String _categoryLabel(AppLocalizations t, String rawCategory) {
+    final c = rawCategory.trim().toLowerCase();
+    switch (c) {
+      case 'food':
+        return t.food;
+      case 'transport':
+        return t.transport;
+      case 'shopping':
+        return t.shopping;
+      case 'bills':
+        return t.bills;
+      case 'entertain':
+      case 'entertainment':
+        return t.entertainment;
+      case 'health':
+        return t.health;
+      case 'education':
+        return t.education;
+      case 'other':
+      default:
+        return t.other;
+    }
+  }
+
+  String _typeLabel(AppLocalizations t, BudgetType type) {
+    switch (type) {
+      case BudgetType.need:
+        return t.need;
+      case BudgetType.want:
+        return t.want;
+      case BudgetType.saving:
+        return t.saving;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _listenToDashboardBalance();
   }
 
-  Future<void> _loadData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      if (mounted) setState(() => _loading = false);
+  void _listenToDashboardBalance() {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null) {
+      setState(() => _loading = false);
       return;
     }
-    final uid = user.uid;
+    final uid = firebaseUser.uid;
 
-    final userDoc = await FirebaseFirestore.instance
+    _userSub = FirebaseFirestore.instance
         .collection('users')
         .doc(uid)
-        .get();
+        .snapshots()
+        .listen(
+          (doc) {
+            if (!doc.exists || doc.data() == null) {
+              if (mounted) setState(() => _loading = false);
+              return;
+            }
 
-    _user = UserModel.fromMap(
-      userDoc.id,
-      userDoc.data()!,
+            final data = doc.data()!;
+            _user = UserModel.fromMap(doc.id, data);
+
+            final Map<String, dynamic>? balanceMap =
+                data['balance'] as Map<String, dynamic>?;
+            final double totalBalance =
+                (balanceMap?['totalBalance'] as num?)?.toDouble() ?? 0.0;
+
+            _totalBalance = totalBalance;
+
+            if (_controllers.isEmpty) {
+              for (final category in _categories) {
+                _controllers[category] = TextEditingController(text: '0');
+              }
+            }
+
+            _applyBalanceRules();
+
+            if (mounted) setState(() => _loading = false);
+          },
+          onError: (e) {
+            if (mounted) {
+              setState(() => _loading = false);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error loading balance: $e'),
+                  backgroundColor: kDangerColor,
+                ),
+              );
+            }
+          },
+        );
+  }
+
+  void _applyBalanceRules() {
+    final balanceNow = _totalBalance;
+
+    if (balanceNow <= 0) {
+      _lastTotalBalance = balanceNow;
+      return;
+    }
+
+    if (_lastTotalBalance == null) {
+      _apply503020WithRecommendations(balanceNow);
+      _lastTotalBalance = balanceNow;
+      return;
+    }
+
+    final changed = _lastTotalBalance != balanceNow;
+
+    if (_dynamicBudgets && changed) {
+      _apply503020WithRecommendations(balanceNow);
+      _lastTotalBalance = balanceNow;
+    } else {
+      _lastTotalBalance = balanceNow;
+    }
+  }
+
+  void _apply503020WithRecommendations(double balance) {
+    final needsPool = balance * 0.50;
+    final wantsPool = balance * 0.30;
+
+    final needCats = _budgetStructure.keys
+        .where((c) => _budgetStructure[c] == BudgetType.need)
+        .toList();
+
+    final wantCats = _budgetStructure.keys
+        .where((c) => _budgetStructure[c] == BudgetType.want)
+        .toList();
+
+    final totalNeedWeight = needCats.fold<double>(
+      0.0,
+      (s, c) => s + (_needWeights[c] ?? 0.0),
+    );
+    final totalWantWeight = wantCats.fold<double>(
+      0.0,
+      (s, c) => s + (_wantWeights[c] ?? 0.0),
     );
 
-    if (_user!.income == 0) {
-      _user = _user!.copyWith(income: 2000.0);
+    for (final c in needCats) {
+      final w = _needWeights[c] ?? 0.0;
+      final amount = (totalNeedWeight > 0)
+          ? (needsPool * (w / totalNeedWeight))
+          : (needsPool / needCats.length);
+      _controllers[c]!.text = _fixed0(amount);
     }
 
-    // Initialise all controllers
-    for (final category in _categories) {
-      _controllers[category] = TextEditingController(text: '0');
-    }
-
-    // Default to 50/30/20 initially
-    _generate503020BudgetControllers();
-
-    setState(() => _loading = false);
-  }
-
-  // ---------------- 50/30/20 BUDGET LOGIC ----------------
-  void _generate503020BudgetControllers() {
-    final double income = _user!.income;
-    final double needsPool = income * 0.50;
-    final double wantsPool = income * 0.30;
-
-    final List<String> needCategories = _budgetStructure.keys
-        .where((cat) => _budgetStructure[cat] == BudgetType.need)
-        .toList();
-    final List<String> wantCategories = _budgetStructure.keys
-        .where((cat) => _budgetStructure[cat] == BudgetType.want)
-        .toList();
-
-    if (needCategories.isNotEmpty) {
-      final double needAllocation = needsPool / needCategories.length;
-      for (final category in needCategories) {
-        _controllers[category]!.text = needAllocation.toStringAsFixed(0);
-      }
-    }
-
-    if (wantCategories.isNotEmpty) {
-      final double wantAllocation = wantsPool / wantCategories.length;
-      for (final category in wantCategories) {
-        _controllers[category]!.text = wantAllocation.toStringAsFixed(0);
-      }
+    for (final c in wantCats) {
+      final w = _wantWeights[c] ?? 0.0;
+      final amount = (totalWantWeight > 0)
+          ? (wantsPool * (w / totalWantWeight))
+          : (wantsPool / wantCats.length);
+      _controllers[c]!.text = _fixed0(amount);
     }
   }
 
-  // ---------------- PREDICTION LOGIC ----------------
   Future<void> _predictBasedOnHistory() async {
+    final t = AppLocalizations.of(context)!;
+
     setState(() => _predicting = true);
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
     try {
-      // 1. Fetch last 6 budgets to get an average
       final snapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(uid)
@@ -124,12 +236,11 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
           .limit(6)
           .get();
 
-      // 2. CHECK: If not enough data
       if (snapshot.docs.isEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Not enough past data to predict!'),
+          SnackBar(
+            content: Text(t.notEnoughPastData),
             backgroundColor: Colors.grey,
           ),
         );
@@ -137,60 +248,56 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
         return;
       }
 
-      // 3. Calculate Averages
-      Map<String, List<double>> historyValues = {};
-      
-      // Initialize lists
-      for (var cat in _categories) {
-        historyValues[cat] = [];
-      }
+      final Map<String, List<double>> historyValues = {
+        for (final cat in _categories) cat: <double>[],
+      };
 
-      // Collect data
-      for (var doc in snapshot.docs) {
+      for (final doc in snapshot.docs) {
         final data = doc.data();
         final catBudget = data['categoryBudget'] as Map<String, dynamic>?;
+        if (catBudget == null) continue;
 
-        if (catBudget != null) {
-          for (var cat in _categories) {
-            if (catBudget.containsKey(cat)) {
-              // Handle safely whether Firestore returns int or double
-              num val = catBudget[cat] ?? 0;
-              historyValues[cat]?.add(val.toDouble());
-            }
-          }
+        for (final cat in _categories) {
+          if (!catBudget.containsKey(cat)) continue;
+          final dynamic raw = catBudget[cat];
+          final double val = raw is num
+              ? raw.toDouble()
+              : double.tryParse(raw?.toString() ?? '0') ?? 0.0;
+          historyValues[cat]!.add(val);
         }
       }
 
-      // Apply averages to controllers
-      historyValues.forEach((category, values) {
-        if (values.isNotEmpty) {
-          double average = values.reduce((a, b) => a + b) / values.length;
-          _controllers[category]?.text = average.toStringAsFixed(0);
-        }
+      historyValues.forEach((cat, values) {
+        if (values.isEmpty) return;
+        final avg = values.reduce((a, b) => a + b) / values.length;
+        _controllers[cat]!.text = _fixed0(avg);
       });
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Predicted based on last ${snapshot.docs.length} records!'),
+          content: Text(t.predictedUsing(snapshot.docs.length.toString())),
           backgroundColor: kSuccessColor,
         ),
       );
-
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error predicting: $e'), backgroundColor: kDangerColor),
+        SnackBar(
+          content: Text('${t.errorPredicting}: $e'),
+          backgroundColor: kDangerColor,
+        ),
       );
     } finally {
-      setState(() => _predicting = false);
+      if (mounted) setState(() => _predicting = false);
     }
   }
 
-  // ---------------- DYNAMIC GETTERS ----------------
   double get _actualNeedsTotal {
     return _budgetStructure.entries.fold(0.0, (sum, entry) {
       if (entry.value == BudgetType.need) {
-        return sum + (double.tryParse(_controllers[entry.key]?.text ?? '0') ?? 0);
+        return sum +
+            (double.tryParse(_controllers[entry.key]?.text ?? '0') ?? 0);
       }
       return sum;
     });
@@ -199,27 +306,26 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
   double get _actualWantsTotal {
     return _budgetStructure.entries.fold(0.0, (sum, entry) {
       if (entry.value == BudgetType.want) {
-        return sum + (double.tryParse(_controllers[entry.key]?.text ?? '0') ?? 0);
+        return sum +
+            (double.tryParse(_controllers[entry.key]?.text ?? '0') ?? 0);
       }
       return sum;
     });
   }
 
-  double get _totalBudgetedSpending => _actualNeedsTotal + _actualWantsTotal;
+  double get _totalBudgeted => _actualNeedsTotal + _actualWantsTotal;
 
-  double get _flexibleSavings {
-    return _user!.income - _totalBudgetedSpending;
-  }
+  double get _flexibleSavings => _totalBalance - _totalBudgeted;
 
-  // ---------------- SAVE ----------------
   Future<void> _saveBudget() async {
+    final t = AppLocalizations.of(context)!;
+
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
     final Map<String, double> categoryBudget = {};
     for (final entry in _controllers.entries) {
-      categoryBudget[entry.key] = double.tryParse(entry.value.text) ?? 0;
+      categoryBudget[entry.key] = double.tryParse(entry.value.text) ?? 0.0;
     }
-
     categoryBudget['Savings'] = _flexibleSavings.clamp(0.0, double.infinity);
 
     final model = BudgetModel(
@@ -233,17 +339,18 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
         .doc(uid)
         .collection('budgets')
         .add({
-      'periodType': model.periodType,
-      'periodKey': model.periodKey,
-      'categoryBudget': model.categoryBudget,
-      'createdAt': Timestamp.now(),
-    });
+          'periodType': model.periodType,
+          'periodKey': model.periodKey,
+          'categoryBudget': model.categoryBudget,
+          'createdAt': Timestamp.now(),
+          'dashboardTotalBalance': _totalBalance,
+        });
 
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Flexible Budget saved successfully!'),
+      SnackBar(
+        content: Text(t.budgetSavedSuccessfully),
         backgroundColor: kSuccessColor,
       ),
     );
@@ -253,53 +360,66 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
 
   @override
   void dispose() {
+    _userSub?.cancel();
     for (final c in _controllers.values) {
       c.dispose();
     }
     super.dispose();
   }
 
-  // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+    final t = AppLocalizations.of(context)!;
+
+    if (_loading || _user == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Flexible 50/30/20 Budget'),
+        title: Text(t.dynamicBudgetsTitle),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 1,
         actions: [
-          // PREDICT BUTTON
+          Row(
+            children: [
+              Text(
+                t.auto,
+                style: const TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+              Switch(
+                value: _dynamicBudgets,
+                activeColor: kAccentColor,
+                onChanged: (v) => setState(() => _dynamicBudgets = v),
+              ),
+            ],
+          ),
           if (_predicting)
             const Padding(
               padding: EdgeInsets.all(12.0),
               child: SizedBox(
-                width: 20, height: 20, 
-                child: CircularProgressIndicator(strokeWidth: 2)
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
               ),
             )
           else
             IconButton(
               onPressed: _predictBasedOnHistory,
               icon: const Icon(Icons.auto_fix_high, color: kAccentColor),
-              tooltip: 'Predict from History',
+              tooltip: t.predictFromHistory,
             ),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildExplanationCard(),
+          _buildExplanationCard(t),
           const SizedBox(height: 15),
-          _buildSummaryCard(),
+          _buildSummaryCard(t),
           const SizedBox(height: 25),
-          ..._categories.map(_buildCategoryField),
+          ..._categories.map((c) => _buildCategoryField(t, c)),
           const SizedBox(height: 30),
           ElevatedButton(
             onPressed: _flexibleSavings < 0 ? null : _saveBudget,
@@ -309,12 +429,12 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
                   ? kDangerColor.withOpacity(0.5)
                   : kAccentColor,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             child: Text(
-              _flexibleSavings < 0
-                  ? ' Over Budget! Reduce Spending'
-                  : 'Apply & Save Flexible Budget',
+              _flexibleSavings < 0 ? t.overBudgetReduce : t.applyAndSaveBudget,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
@@ -323,27 +443,35 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
     );
   }
 
-  Widget _buildExplanationCard() {
+  Widget _buildExplanationCard(AppLocalizations t) {
     return Card(
       color: kAccentColor.withOpacity(0.1),
       elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Text(
-          'Tap the magic wand icon (top right) to predict budget from past data, or adjust manually below.',
-          style: const TextStyle(color: kAccentColor, fontWeight: FontWeight.w500),
+          (_totalBalance <= 0
+                  ? t.balanceIsZeroHint
+                  : t.usingDashboardBalanceHint)
+              .toString(),
+          style: const TextStyle(
+            color: kAccentColor,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildSummaryCard() {
-    final double income = _user!.income;
-    final double targetSavings = income * 0.20;
-    final double actualNeeds = _actualNeedsTotal;
-    final double actualWants = _actualWantsTotal;
-    final double flexibleSavings = _flexibleSavings;
-    final double totalBudgeted = actualNeeds + actualWants;
+  Widget _buildSummaryCard(AppLocalizations t) {
+    final balance = _totalBalance;
+    final targetNeeds = balance * 0.50;
+    final targetWants = balance * 0.30;
+    final targetSavings = balance * 0.20;
+
+    final actualNeeds = _actualNeedsTotal;
+    final actualWants = _actualWantsTotal;
+    final savings = _flexibleSavings;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -356,80 +484,57 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Total Income: ${_user!.currency} ${income.toStringAsFixed(0)}',
+            '${t.totalBalanceDashboard}: ${_user!.currency} ${_fixed0(balance)}',
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const Divider(height: 16),
           _buildSummaryRow(
-            'Actual Needs (Target: ${income * 0.50})',
+            '${t.needsTarget(_fixed0(targetNeeds))}',
             actualNeeds,
-            color: actualNeeds > income * 0.50 ? kDangerColor : kAccentColor,
+            color: actualNeeds > targetNeeds ? kDangerColor : kAccentColor,
             bold: true,
           ),
           _buildSummaryRow(
-            'Actual Wants (Target: ${income * 0.30})',
+            '${t.wantsTarget(_fixed0(targetWants))}',
             actualWants,
-            color: kDangerColor,
+            color: actualWants > targetWants ? kDangerColor : kAccentColor,
             bold: true,
           ),
           const Divider(height: 16),
           _buildSummaryRow(
-            '**Flexible Savings (20% Target: ${targetSavings.toStringAsFixed(0)})**',
-            flexibleSavings,
-            color: flexibleSavings >= targetSavings
-                ? kSuccessColor
-                : (flexibleSavings < 0 ? kDangerColor : Colors.orange),
+            '${t.savingsTarget(_fixed0(targetSavings))}',
+            savings,
+            color: savings >= targetSavings ? kSuccessColor : Colors.orange,
             bold: true,
-          ),
-          const Divider(height: 16),
-          Text(
-            'Total Budgeted: ${_user!.currency} ${totalBudgeted.toStringAsFixed(0)}',
-            style: const TextStyle(
-              color: kAccentColor,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryRow(String label, double amount,
-      {Color? color, bool bold = false}) {
-    final String cleanLabel = label.contains('Target:')
-        ? label.substring(0, label.indexOf('(')).trim()
-        : label.replaceAll('**', '');
-    final String subLabel =
-        label.contains('Target:') ? label.substring(label.indexOf('(')) : '';
-
+  Widget _buildSummaryRow(
+    String label,
+    double amount, {
+    Color? color,
+    bool bold = false,
+  }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                cleanLabel,
-                style: TextStyle(
-                  color: color ?? Colors.black87,
-                  fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-                ),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: color ?? Colors.black87,
+                fontWeight: bold ? FontWeight.bold : FontWeight.normal,
               ),
-              if (subLabel.isNotEmpty)
-                Text(
-                  subLabel,
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 12,
-                  ),
-                ),
-            ],
+            ),
           ),
+          const SizedBox(width: 10),
           Text(
-            '${_user!.currency} ${amount.toStringAsFixed(0)}',
+            '${_user!.currency} ${_fixed0(amount)}',
             style: TextStyle(
               color: color ?? Colors.black,
               fontWeight: bold ? FontWeight.bold : FontWeight.normal,
@@ -440,10 +545,13 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
     );
   }
 
-  Widget _buildCategoryField(String category) {
-    final type = _budgetStructure[category];
+  Widget _buildCategoryField(AppLocalizations t, String category) {
+    final type = _budgetStructure[category]!;
     final typeColor = type == BudgetType.need ? kAccentColor : kDangerColor;
     final typeIcon = type == BudgetType.need ? Icons.check_circle : Icons.star;
+
+    final label = _categoryLabel(t, category);
+    final typeText = _typeLabel(t, type);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -452,7 +560,7 @@ class _AdvancedBudgetScreenState extends State<AdvancedBudgetScreen> {
         keyboardType: TextInputType.number,
         onChanged: (_) => setState(() {}),
         decoration: InputDecoration(
-          labelText: '$category (${type.toString().split('.').last.toUpperCase()})',
+          labelText: '$label (${typeText.toUpperCase()})',
           prefixIcon: Icon(typeIcon, color: typeColor),
           suffixText: _user!.currency,
           border: const OutlineInputBorder(),

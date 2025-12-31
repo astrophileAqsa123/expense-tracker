@@ -1,0 +1,225 @@
+{
+  "@@locale": "es",
+
+  "settings": "Configuración",
+  "general": "GENERAL",
+  "account": "Cuenta",
+  "accountSubtitle": "Perfil, contraseña",
+  "language": "Idioma",
+  "currency": "Moneda",
+  "logout": "Cerrar sesión",
+
+  "appearance": "APARIENCIA",
+  "darkMode": "Modo oscuro",
+
+  "budgetFeatures": "FUNCIONES DE PRESUPUESTO",
+  "advancedBudgetSetup": "Configuración avanzada de presupuesto",
+  "advancedBudgetSubtitle": "Predicciones con IA y auto-categoría",
+
+  "security": "SEGURIDAD",
+  "privacySecurity": "Privacidad y seguridad",
+  "privacySecuritySubtitle": "Bloqueo de app, permisos",
+
+  "about": "ACERCA DE",
+  "aboutApp": "Acerca de la app",
+
+  "dashboard": "Panel",
+
+  "analytics": "Analíticas",
+  "analysis": "Análisis",
+  "graphs": "Gráficos",
+  "graph": "Gráfico",
+  "charts": "Diagramas",
+  "chart": "Diagrama",
+  "spendingTrends": "Tendencias de gasto",
+  "incomeVsExpense": "Ingresos vs gastos",
+  "categoryBreakdown": "Desglose por categoría",
+  "overview": "Resumen",
+  "report": "Reporte",
+  "exportReport": "Exportar reporte",
+  "noData": "No hay datos disponibles",
+  "selectRange": "Seleccionar rango",
+  "filter": "Filtrar",
+  "reset": "Restablecer",
+
+  "weekly": "Semanal",
+  "monthly": "Mensual",
+  "yearly": "Anual",
+
+  "userNotLoggedIn": "Usuario no conectado. Inicia sesión para ver el panel.",
+  "user": "Usuario",
+  "loading": "Cargando...",
+  "welcomeBack": "Bienvenido de nuevo,",
+  "downloadPdfReport": "Descargar informe PDF",
+  "notifications": "Notificaciones",
+
+  "permissionDeniedTitle": "Permiso denegado",
+  "permissionDeniedMessage": "Revisa las reglas de seguridad de Firebase Firestore (users/{userId}).",
+  "errorLoadingBalance": "Error al cargar el balance",
+  "balanceDataMissingTitle": "Faltan datos de balance",
+  "balanceDataMissingMessage": "Asegúrate de que exista un documento en users/{userId} y contenga el mapa balance.",
+  "errorLoadingStatsPermissionDenied": "Error al cargar estadísticas (Permiso denegado). Revisa las reglas para transactions/{transactionId}.",
+
+  "totalBalance": "Balance total",
+  "income": "Ingresos",
+  "expenses": "Gastos",
+  "expense": "Gasto",
+  "savings": "Ahorros",
+
+  "transactions": "Transacciones",
+  "categories": "Categorías",
+  "pendingBills": "Facturas pendientes",
+
+  "spendingOverview": "Resumen de gastos",
+  "errorLoadingChartData": "Error al cargar datos del gráfico.",
+  "noExpenseDataAvailable": "No hay datos de gastos",
+
+  "recentTransactions": "Transacciones recientes",
+  "viewAll": "Ver todo",
+  "seeAll": "Ver todo",
+  "errorLoadingTransactions": "Error al cargar transacciones",
+  "noTransactionsYet": "Aún no hay transacciones",
+  "transaction": "Transacción",
+
+  "yourBudgets": "Tus presupuestos",
+
+  "addExpense": "Agregar gasto",
+  "addIncome": "Agregar ingreso",
+  "scanReceipt": "Escanear recibo",
+
+  "title": "Título",
+  "amount": "Monto",
+  "category": "Categoría",
+  "notesOptional": "Notas (opcional)",
+  "descriptionOptional": "Descripción (opcional)",
+
+  "enterTitle": "Ingresa un título",
+  "enterAmount": "Ingresa un monto",
+  "invalidNumber": "Número inválido",
+  "amountMustBeGreaterThanZero": "El monto debe ser > 0",
+
+  "expenseFailedTitle": "Gasto fallido",
+  "expenseOverBalanceMessage": "Tu gasto es mayor que tu balance disponible.\n\nBalance disponible: {balance}\nGasto: {expense}\nFalta: {diff}\n\nReduce el gasto o agrega ingresos primero.",
+  "@expenseOverBalanceMessage": {
+    "placeholders": {
+      "balance": {},
+      "expense": {},
+      "diff": {}
+    }
+  },
+
+  "ok": "OK",
+  "expenseAddedSuccessfully": "Gasto agregado correctamente",
+  "failedToAddExpense": "No se pudo agregar el gasto",
+
+  "incomeAddedSuccessfully": "¡Ingreso agregado correctamente!",
+  "failedToAddIncome": "No se pudo agregar el ingreso",
+
+  "food": "Comida",
+  "transport": "Transporte",
+  "shopping": "Compras",
+  "bills": "Facturas",
+  "entertainment": "Entretenimiento",
+  "health": "Salud",
+  "education": "Educación",
+  "other": "Otro",
+
+  "rent": "Alquiler",
+  "travel": "Viaje",
+
+  "salary": "Salario",
+  "freelance": "Freelance",
+  "business": "Negocio",
+  "bonus": "Bono",
+  "gift": "Regalo",
+  "expenseByCategory": "Gasto por categoría",
+  "dailyExpenseTrend": "Tendencia diaria de gastos",
+  "netSavings": "Ahorro neto",
+  "noDailyExpenseData": "No hay datos diarios de gasto.",
+  "dayOfMonth": "Día del mes",
+  "need": "Necesidad",
+  "want": "Deseo",
+  "saving": "Ahorro",
+
+  "notEnoughPastData": "¡No hay suficientes datos anteriores para predecir!",
+  "predictedUsing": "Predicho usando los últimos {count} presupuestos",
+  "@predictedUsing": { "placeholders": { "count": {} } },
+
+  "errorPredicting": "Error al predecir: {error}",
+  "@errorPredicting": { "placeholders": { "error": {} } },
+
+  "budgetSavedSuccessfully": "¡Presupuesto guardado con éxito!",
+  "dynamicBudgetsTitle": "Presupuestos dinámicos (autoajuste según el balance)",
+  "auto": "Auto",
+  "predictFromHistory": "Predecir desde el historial",
+
+  "overBudgetReduce": "¡Fuera de presupuesto! Reduce el gasto",
+  "applyAndSaveBudget": "Aplicar y guardar presupuesto",
+
+  "balanceIsZeroHint": "El balance total del panel es 0. Agrega ingresos para obtener recomendaciones.",
+  "usingDashboardBalanceHint": "Usando el balance total del panel (users/{uid}.balance.totalBalance) y aplicando 50/30/20 con recomendaciones por categoría.",
+  "totalBalanceDashboard": "Balance total (Panel): {currency} {amount}",
+  "@totalBalanceDashboard": { "placeholders": { "currency": {}, "amount": {} } },
+
+  "needsTarget": "Necesidades (Objetivo: {amount})",
+  "@needsTarget": { "placeholders": { "amount": {} } },
+
+  "wantsTarget": "Deseos (Objetivo: {amount})",
+  "@wantsTarget": { "placeholders": { "amount": {} } },
+
+  "savingsTarget": "Ahorro (Objetivo: {amount})",
+  "@savingsTarget": { "placeholders": { "amount": {} } },
+
+  "budgetDocNotFound": "Error: No se encontró el documento de presupuesto para editar.",
+  "editingBudget": "Editando presupuesto: {periodKey}",
+  "@editingBudget": { "placeholders": { "periodKey": {} } },
+
+  "enterAtLeastOneCategoryBudget": "Ingresa al menos un presupuesto de categoría",
+  "budgetAlreadyExistsLoadToEdit": "Ya existe un presupuesto para este período. Cárgalo para editar.",
+  "budgetUpdated": "Presupuesto actualizado",
+  "budgetCreated": "Presupuesto creado",
+  "budgetDeleted": "Presupuesto eliminado",
+
+  "editBudget": "Editar presupuesto",
+  "setBudget": "Establecer presupuesto",
+  "categoryBudgets": "Presupuestos por categoría",
+  "updateBudget": "Actualizar presupuesto",
+  "saveBudget": "Guardar presupuesto",
+  "deleteBudget": "Eliminar presupuesto",
+  "viewEditOldBudgets": "Ver/Editar presupuestos antiguos",
+
+  "budgetPeriod": "Período del presupuesto",
+  "daily": "Diario",
+  "customDays": "Días personalizados",
+  "numberOfDays": "Número de días",
+
+  "currencyPrefix": "Rs ",
+
+  "budgetDeletedSuccessfully": "¡Presupuesto eliminado con éxito!",
+  "failedToDeleteBudget": "No se pudo eliminar el presupuesto: {error}",
+  "@failedToDeleteBudget": { "placeholders": { "error": {} } },
+
+  "confirmDeletion": "Confirmar eliminación",
+  "confirmDeleteBudgetMessage": "¿Seguro que deseas eliminar el presupuesto de {periodKey}? Esta acción no se puede deshacer.",
+  "@confirmDeleteBudgetMessage": { "placeholders": { "periodKey": {} } },
+
+  "cancel": "Cancelar",
+  "delete": "Eliminar",
+  "close": "Cerrar",
+
+  "editBudgetPlaceholder": "Implementando edición para el presupuesto {periodKey}. Normalmente navegarías a un formulario aquí.",
+  "@editBudgetPlaceholder": { "placeholders": { "periodKey": {} } },
+
+  "noBudgetsFound": "No se encontraron presupuestos",
+  "createFirstBudgetHint": "Crea tu primer presupuesto para comenzar.",
+
+  "edit": "Editar",
+  "total": "Total",
+  "tapToApplyBudget": "Toca para aplicar este presupuesto",
+  "balanceIsZeroHint": "El balance total del panel es 0. Agrega ingresos para obtener recomendaciones.",
+  "usingDashboardBalanceHint": "Usando el balance total del panel (users/{uid}.balance.totalBalance) y aplicando 50/30/20 con recomendaciones por categoría.",
+
+  "permissionDeniedMessage": "Revisa tus reglas de seguridad de Firebase Firestore (users/{userId}).",
+  "balanceDataMissingMessage": "Asegúrate de que exista un documento en users/{userId} y que contenga el campo balance (map).",
+  "errorLoadingStatsPermissionDenied": "Error al cargar estadísticas (Permission Denied). Revisa las reglas para transactions/{transactionId}."
+}

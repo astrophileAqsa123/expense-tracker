@@ -1,0 +1,225 @@
+{
+  "@@locale": "en",
+
+  "settings": "Settings",
+  "general": "GENERAL",
+  "account": "Account",
+  "accountSubtitle": "Profile, password",
+  "language": "Language",
+  "currency": "Currency",
+  "logout": "Logout",
+
+  "appearance": "APPEARANCE",
+  "darkMode": "Dark Mode",
+
+  "budgetFeatures": "BUDGET FEATURES",
+  "advancedBudgetSetup": "Advanced Budget Setup",
+  "advancedBudgetSubtitle": "AI predictions & auto-category",
+
+  "security": "SECURITY",
+  "privacySecurity": "Privacy & Security",
+  "privacySecuritySubtitle": "App lock, permissions",
+
+  "about": "ABOUT",
+  "aboutApp": "About App",
+
+  "dashboard": "Dashboard",
+
+  "analytics": "Analytics",
+  "analysis": "Analysis",
+  "graphs": "Graphs",
+  "graph": "Graph",
+  "charts": "Charts",
+  "chart": "Chart",
+  "spendingTrends": "Spending Trends",
+  "incomeVsExpense": "Income vs Expense",
+  "categoryBreakdown": "Category Breakdown",
+  "overview": "Overview",
+  "report": "Report",
+  "exportReport": "Export Report",
+  "noData": "No data available",
+  "selectRange": "Select Range",
+  "filter": "Filter",
+  "reset": "Reset",
+
+  "weekly": "Weekly",
+  "monthly": "Monthly",
+  "yearly": "Yearly",
+
+  "userNotLoggedIn": "User not logged in. Please log in to view the dashboard.",
+  "user": "User",
+  "loading": "Loading...",
+  "welcomeBack": "Welcome back,",
+  "downloadPdfReport": "Download PDF Report",
+  "notifications": "Notifications",
+
+  "permissionDeniedTitle": "Permission Denied",
+  "permissionDeniedMessage": "Check your Firebase Firestore Security Rules (users/{userId}).",
+  "errorLoadingBalance": "Error loading balance",
+  "balanceDataMissingTitle": "Balance Data Missing",
+  "balanceDataMissingMessage": "Ensure a document exists at users/{userId} and contains a balance map field.",
+  "errorLoadingStatsPermissionDenied": "Error loading stats (Permission Denied). Check rules for transactions/{transactionId}.",
+
+  "totalBalance": "Total Balance",
+  "income": "Income",
+  "expenses": "Expenses",
+  "expense": "Expense",
+  "savings": "Savings",
+
+  "transactions": "Transactions",
+  "categories": "Categories",
+  "pendingBills": "Pending Bills",
+
+  "spendingOverview": "Spending Overview",
+  "errorLoadingChartData": "Error loading chart data.",
+  "noExpenseDataAvailable": "No expense data available",
+
+  "recentTransactions": "Recent Transactions",
+  "viewAll": "View All",
+  "seeAll": "See All",
+  "errorLoadingTransactions": "Error loading transactions",
+  "noTransactionsYet": "No transactions yet",
+  "transaction": "Transaction",
+
+  "yourBudgets": "Your Budgets",
+
+  "addExpense": "Add Expense",
+  "addIncome": "Add Income",
+  "scanReceipt": "Scan Receipt",
+
+  "title": "Title",
+  "amount": "Amount",
+  "category": "Category",
+  "notesOptional": "Notes (optional)",
+  "descriptionOptional": "Description (optional)",
+
+  "enterTitle": "Enter title",
+  "enterAmount": "Enter amount",
+  "invalidNumber": "Invalid number",
+  "amountMustBeGreaterThanZero": "Amount must be > 0",
+
+  "expenseFailedTitle": "Expense Failed",
+  "expenseOverBalanceMessage": "Your expense is greater than your available balance.\n\nAvailable Balance: {balance}\nExpense: {expense}\nShort by: {diff}\n\nPlease reduce expense or add income first.",
+  "@expenseOverBalanceMessage": {
+    "placeholders": {
+      "balance": {},
+      "expense": {},
+      "diff": {}
+    }
+  },
+
+  "ok": "OK",
+  "expenseAddedSuccessfully": "Expense added successfully",
+  "failedToAddExpense": "Failed to add expense",
+
+  "incomeAddedSuccessfully": "Income added successfully!",
+  "failedToAddIncome": "Failed to add income",
+
+  "food": "Food",
+  "transport": "Transport",
+  "shopping": "Shopping",
+  "bills": "Bills",
+  "entertainment": "Entertainment",
+  "health": "Health",
+  "education": "Education",
+  "other": "Other",
+
+  "rent": "Rent",
+  "travel": "Travel",
+
+  "salary": "Salary",
+  "freelance": "Freelance",
+  "business": "Business",
+  "bonus": "Bonus",
+  "gift": "Gift",
+  "expenseByCategory": "Expense by Category",
+  "dailyExpenseTrend": "Daily Expense Trend",
+  "netSavings": "Net Savings",
+  "noDailyExpenseData": "No daily expense data.",
+  "dayOfMonth": "Day of Month",
+  "need": "Need",
+  "want": "Want",
+  "saving": "Saving",
+
+  "notEnoughPastData": "Not enough past data to predict!",
+  "predictedUsing": "Predicted using last {count} budgets",
+  "@predictedUsing": { "placeholders": { "count": {} } },
+
+  "errorPredicting": "Error predicting: {error}",
+  "@errorPredicting": { "placeholders": { "error": {} } },
+
+  "budgetSavedSuccessfully": "Budget saved successfully!",
+  "dynamicBudgetsTitle": "Dynamic Budgets (auto-adjust based on balance)",
+  "auto": "Auto",
+  "predictFromHistory": "Predict from History",
+
+  "overBudgetReduce": "Over Budget! Reduce Spending",
+  "applyAndSaveBudget": "Apply & Save Budget",
+
+  "balanceIsZeroHint": "Dashboard total balance is 0. Add income to get recommendations.",
+  "usingDashboardBalanceHint": "Using Dashboard Total Balance (users/{uid}.balance.totalBalance) and applying 50/30/20 with category recommendations.",
+  "totalBalanceDashboard": "Total Balance (Dashboard): {currency} {amount}",
+  "@totalBalanceDashboard": { "placeholders": { "currency": {}, "amount": {} } },
+
+  "needsTarget": "Needs (Target: {amount})",
+  "@needsTarget": { "placeholders": { "amount": {} } },
+
+  "wantsTarget": "Wants (Target: {amount})",
+  "@wantsTarget": { "placeholders": { "amount": {} } },
+
+  "savingsTarget": "Savings (Target: {amount})",
+  "@savingsTarget": { "placeholders": { "amount": {} } },
+
+  "budgetDocNotFound": "Error: Budget document not found for editing.",
+  "editingBudget": "Editing budget: {periodKey}",
+  "@editingBudget": { "placeholders": { "periodKey": {} } },
+
+  "enterAtLeastOneCategoryBudget": "Please enter at least one category budget",
+  "budgetAlreadyExistsLoadToEdit": "Budget for this period already exists. Load it to edit.",
+  "budgetUpdated": "Budget updated",
+  "budgetCreated": "Budget created",
+  "budgetDeleted": "Budget deleted",
+
+  "editBudget": "Edit Budget",
+  "setBudget": "Set Budget",
+  "categoryBudgets": "Category Budgets",
+  "updateBudget": "Update Budget",
+  "saveBudget": "Save Budget",
+  "deleteBudget": "Delete Budget",
+  "viewEditOldBudgets": "View/Edit Old Budgets",
+
+  "budgetPeriod": "Budget Period",
+  "daily": "Daily",
+  "customDays": "Custom Days",
+  "numberOfDays": "Number of days",
+
+  "currencyPrefix": "Rs ",
+
+  "budgetDeletedSuccessfully": "Budget deleted successfully!",
+  "failedToDeleteBudget": "Failed to delete budget: {error}",
+  "@failedToDeleteBudget": { "placeholders": { "error": {} } },
+
+  "confirmDeletion": "Confirm Deletion",
+  "confirmDeleteBudgetMessage": "Are you sure you want to delete the budget for {periodKey}? This action cannot be undone.",
+  "@confirmDeleteBudgetMessage": { "placeholders": { "periodKey": {} } },
+
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "close": "Close",
+
+  "editBudgetPlaceholder": "Implementing edit for budget {periodKey}. You would typically navigate to a form here.",
+  "@editBudgetPlaceholder": { "placeholders": { "periodKey": {} } },
+
+  "noBudgetsFound": "No budgets found",
+  "createFirstBudgetHint": "Create your first budget to get started.",
+
+  "edit": "Edit",
+  "total": "Total",
+  "tapToApplyBudget": "Tap to apply this budget",
+  "balanceIsZeroHint": "Dashboard total balance is 0. Add income to get recommendations.",
+  "usingDashboardBalanceHint": "Using Dashboard Total Balance (users/{uid}.balance.totalBalance) and applying 50/30/20 with category recommendations.",
+
+  "permissionDeniedMessage": "Check your Firebase Firestore Security Rules (users/{userId}).",
+  "balanceDataMissingMessage": "Ensure a document exists at users/{userId} and contains a balance map field.",
+  "errorLoadingStatsPermissionDenied": "Error loading stats (Permission Denied). Check rules for transactions/{transactionId}."
+}

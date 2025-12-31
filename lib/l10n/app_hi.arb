@@ -1,0 +1,225 @@
+{
+  "@@locale": "hi",
+
+  "settings": "सेटिंग्स",
+  "general": "सामान्य",
+  "account": "अकाउंट",
+  "accountSubtitle": "प्रोफ़ाइल, पासवर्ड",
+  "language": "भाषा",
+  "currency": "मुद्रा",
+  "logout": "लॉगआउट",
+
+  "appearance": "दिखावट",
+  "darkMode": "डार्क मोड",
+
+  "budgetFeatures": "बजट फीचर्स",
+  "advancedBudgetSetup": "एडवांस बजट सेटअप",
+  "advancedBudgetSubtitle": "AI अनुमान और ऑटो-कैटेगरी",
+
+  "security": "सुरक्षा",
+  "privacySecurity": "प्राइवेसी और सुरक्षा",
+  "privacySecuritySubtitle": "ऐप लॉक, परमिशन",
+
+  "about": "परिचय",
+  "aboutApp": "ऐप के बारे में",
+
+  "dashboard": "डैशबोर्ड",
+
+  "analytics": "एनालिटिक्स",
+  "analysis": "विश्लेषण",
+  "graphs": "ग्राफ़",
+  "graph": "ग्राफ़",
+  "charts": "चार्ट्स",
+  "chart": "चार्ट",
+  "spendingTrends": "खर्च के रुझान",
+  "incomeVsExpense": "आय बनाम खर्च",
+  "categoryBreakdown": "कैटेगरी अनुसार विभाजन",
+  "overview": "ओवरव्यू",
+  "report": "रिपोर्ट",
+  "exportReport": "रिपोर्ट एक्सपोर्ट करें",
+  "noData": "कोई डेटा उपलब्ध नहीं",
+  "selectRange": "रेंज चुनें",
+  "filter": "फ़िल्टर",
+  "reset": "रीसेट",
+
+  "weekly": "साप्ताहिक",
+  "monthly": "मासिक",
+  "yearly": "वार्षिक",
+
+  "userNotLoggedIn": "यूज़र लॉग इन नहीं है। डैशबोर्ड देखने के लिए लॉग इन करें।",
+  "user": "यूज़र",
+  "loading": "लोड हो रहा है...",
+  "welcomeBack": "वापसी पर स्वागत है,",
+  "downloadPdfReport": "PDF रिपोर्ट डाउनलोड करें",
+  "notifications": "नोटिफिकेशन",
+
+  "permissionDeniedTitle": "अनुमति अस्वीकृत",
+  "permissionDeniedMessage": "Firebase Firestore के सुरक्षा नियम चेक करें (users/{userId}).",
+  "errorLoadingBalance": "बैलेंस लोड करने में त्रुटि",
+  "balanceDataMissingTitle": "बैलेंस डेटा नहीं मिला",
+  "balanceDataMissingMessage": "सुनिश्चित करें users/{userId} पर डॉक्यूमेंट मौजूद है और उसमें balance फ़ील्ड है।",
+  "errorLoadingStatsPermissionDenied": "स्टैट्स लोड करने में त्रुटि (अनुमति अस्वीकृत)। transactions/{transactionId} नियम चेक करें।",
+
+  "totalBalance": "कुल बैलेंस",
+  "income": "आय",
+  "expenses": "खर्च",
+  "expense": "खर्च",
+  "savings": "बचत",
+
+  "transactions": "लेन-देन",
+  "categories": "कैटेगरी",
+  "pendingBills": "बकाया बिल",
+
+  "spendingOverview": "खर्च का ओवरव्यू",
+  "errorLoadingChartData": "चार्ट डेटा लोड करने में त्रुटि।",
+  "noExpenseDataAvailable": "कोई खर्च डेटा उपलब्ध नहीं",
+
+  "recentTransactions": "हाल के लेन-देन",
+  "viewAll": "सभी देखें",
+  "seeAll": "सभी देखें",
+  "errorLoadingTransactions": "लेन-देन लोड करने में त्रुटि",
+  "noTransactionsYet": "अभी कोई लेन-देन नहीं",
+  "transaction": "लेन-देन",
+
+  "yourBudgets": "आपके बजट",
+
+  "addExpense": "खर्च जोड़ें",
+  "addIncome": "आय जोड़ें",
+  "scanReceipt": "रसीद स्कैन करें",
+
+  "title": "शीर्षक",
+  "amount": "राशि",
+  "category": "कैटेगरी",
+  "notesOptional": "नोट्स (वैकल्पिक)",
+  "descriptionOptional": "विवरण (वैकल्पिक)",
+
+  "enterTitle": "शीर्षक दर्ज करें",
+  "enterAmount": "राशि दर्ज करें",
+  "invalidNumber": "अमान्य संख्या",
+  "amountMustBeGreaterThanZero": "राशि 0 से बड़ी होनी चाहिए",
+
+  "expenseFailedTitle": "खर्च असफल",
+  "expenseOverBalanceMessage": "आपका खर्च उपलब्ध बैलेंस से अधिक है।\n\nउपलब्ध बैलेंस: {balance}\nखर्च: {expense}\nकमी: {diff}\n\nकृपया खर्च कम करें या पहले आय जोड़ें।",
+  "@expenseOverBalanceMessage": {
+    "placeholders": {
+      "balance": {},
+      "expense": {},
+      "diff": {}
+    }
+  },
+
+  "ok": "ठीक है",
+  "expenseAddedSuccessfully": "खर्च सफलतापूर्वक जोड़ा गया",
+  "failedToAddExpense": "खर्च जोड़ने में विफल",
+
+  "incomeAddedSuccessfully": "आय सफलतापूर्वक जोड़ी गई!",
+  "failedToAddIncome": "आय जोड़ने में विफल",
+
+  "food": "खाना",
+  "transport": "परिवहन",
+  "shopping": "खरीदारी",
+  "bills": "बिल",
+  "entertainment": "मनोरंजन",
+  "health": "स्वास्थ्य",
+  "education": "शिक्षा",
+  "other": "अन्य",
+
+  "rent": "किराया",
+  "travel": "यात्रा",
+
+  "salary": "वेतन",
+  "freelance": "फ्रीलांस",
+  "business": "व्यवसाय",
+  "bonus": "बोनस",
+  "gift": "उपहार",
+   "expenseByCategory": "कैटेगरी अनुसार खर्च",
+  "dailyExpenseTrend": "दैनिक खर्च ट्रेंड",
+  "netSavings": "कुल बचत",
+  "noDailyExpenseData": "दैनिक खर्च डेटा उपलब्ध नहीं।",
+  "dayOfMonth": "महीने का दिन",
+  "need": "ज़रूरत",
+  "want": "चाहत",
+  "saving": "बचत",
+
+  "notEnoughPastData": "प्रीडिक्ट करने के लिए पर्याप्त पुराना डेटा नहीं!",
+  "predictedUsing": "पिछले {count} बजट के आधार पर अनुमान लगाया गया",
+  "@predictedUsing": { "placeholders": { "count": {} } },
+
+  "errorPredicting": "अनुमान में त्रुटि: {error}",
+  "@errorPredicting": { "placeholders": { "error": {} } },
+
+  "budgetSavedSuccessfully": "बजट सफलतापूर्वक सेव हो गया!",
+  "dynamicBudgetsTitle": "डायनामिक बजट (बैलेंस के अनुसार ऑटो-एडजस्ट)",
+  "auto": "ऑटो",
+  "predictFromHistory": "हिस्ट्री से अनुमान",
+
+  "overBudgetReduce": "बजट से ज्यादा! खर्च कम करें",
+  "applyAndSaveBudget": "लागू करें और बजट सेव करें",
+
+  "balanceIsZeroHint": "डैशबोर्ड का कुल बैलेंस 0 है। सुझाव पाने के लिए आय जोड़ें।",
+  "usingDashboardBalanceHint": "डैशबोर्ड कुल बैलेंस (users/{uid}.balance.totalBalance) पर 50/30/20 और कैटेगरी सुझाव लागू किए जा रहे हैं।",
+  "totalBalanceDashboard": "कुल बैलेंस (डैशबोर्ड): {currency} {amount}",
+  "@totalBalanceDashboard": { "placeholders": { "currency": {}, "amount": {} } },
+
+  "needsTarget": "ज़रूरतें (लक्ष्य: {amount})",
+  "@needsTarget": { "placeholders": { "amount": {} } },
+
+  "wantsTarget": "चाहतें (लक्ष्य: {amount})",
+  "@wantsTarget": { "placeholders": { "amount": {} } },
+
+  "savingsTarget": "बचत (लक्ष्य: {amount})",
+  "@savingsTarget": { "placeholders": { "amount": {} } },
+
+  "budgetDocNotFound": "त्रुटि: एडिट के लिए बजट डॉक्यूमेंट नहीं मिला।",
+  "editingBudget": "बजट एडिट हो रहा है: {periodKey}",
+  "@editingBudget": { "placeholders": { "periodKey": {} } },
+
+  "enterAtLeastOneCategoryBudget": "कम से कम एक कैटेगरी बजट दर्ज करें",
+  "budgetAlreadyExistsLoadToEdit": "इस अवधि का बजट पहले से मौजूद है। एडिट के लिए लोड करें।",
+  "budgetUpdated": "बजट अपडेट हो गया",
+  "budgetCreated": "बजट बना दिया गया",
+  "budgetDeleted": "बजट हटाया गया",
+
+  "editBudget": "बजट एडिट करें",
+  "setBudget": "बजट सेट करें",
+  "categoryBudgets": "कैटेगरी बजट",
+  "updateBudget": "बजट अपडेट करें",
+  "saveBudget": "बजट सेव करें",
+  "deleteBudget": "बजट हटाएं",
+  "viewEditOldBudgets": "पुराने बजट देखें/एडिट करें",
+
+  "budgetPeriod": "बजट अवधि",
+  "daily": "दैनिक",
+  "customDays": "कस्टम दिन",
+  "numberOfDays": "दिनों की संख्या",
+
+  "currencyPrefix": "Rs ",
+
+  "budgetDeletedSuccessfully": "बजट सफलतापूर्वक हटाया गया!",
+  "failedToDeleteBudget": "बजट हटाने में विफल: {error}",
+  "@failedToDeleteBudget": { "placeholders": { "error": {} } },
+
+  "confirmDeletion": "हटाने की पुष्टि",
+  "confirmDeleteBudgetMessage": "क्या आप वाकई {periodKey} के बजट को हटाना चाहते हैं? यह वापस नहीं होगा।",
+  "@confirmDeleteBudgetMessage": { "placeholders": { "periodKey": {} } },
+
+  "cancel": "रद्द करें",
+  "delete": "हटाएं",
+  "close": "बंद करें",
+
+  "editBudgetPlaceholder": "{periodKey} बजट के लिए एडिट फीचर बनाना बाकी है। आमतौर पर यहाँ फॉर्म पर जाते हैं।",
+  "@editBudgetPlaceholder": { "placeholders": { "periodKey": {} } },
+
+  "noBudgetsFound": "कोई बजट नहीं मिला",
+  "createFirstBudgetHint": "शुरू करने के लिए अपना पहला बजट बनाएं।",
+
+  "edit": "एडिट",
+  "total": "कुल",
+  "tapToApplyBudget": "इस बजट को लागू करने के लिए टैप करें",
+  "balanceIsZeroHint": "डैशबोर्ड का कुल बैलेंस 0 है। सुझाव पाने के लिए आय जोड़ें।",
+  "usingDashboardBalanceHint": "डैशबोर्ड कुल बैलेंस (users/{uid}.balance.totalBalance) पर 50/30/20 और कैटेगरी सुझाव लागू किए जा रहे हैं।",
+
+  "permissionDeniedMessage": "अपने Firebase Firestore Security Rules जांचें (users/{userId}).",
+  "balanceDataMissingMessage": "सुनिश्चित करें कि users/{userId} पर डॉक्यूमेंट मौजूद है और उसमें balance map फील्ड है।",
+  "errorLoadingStatsPermissionDenied": "स्टैट्स लोड करने में त्रुटि (Permission Denied). transactions/{transactionId} के नियम जांचें।"
+}
