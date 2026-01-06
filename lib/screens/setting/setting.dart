@@ -9,6 +9,8 @@ import '../../l10n/app_localizations.dart'; // ✅ NEW (generated)
 
 import '../budget/advanced_budget_screen.dart';
 import '../setting/profile_edit_screen.dart';
+import '../security/security_screen.dart';
+
 
 // ✅ Make sure THIS path matches your project structure
 import 'app_lock_and_permissions.dart';
@@ -317,6 +319,77 @@ class _SecurityPermissionsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const Text(
+  "App Security",
+  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+),
+const SizedBox(height: 12),
+Card(
+  child: ListTile(
+    leading: const Icon(Icons.delete_outline, color: Colors.red),
+    title: const Text("Remove App PIN"),
+    subtitle: const Text("Disable app lock PIN"),
+    trailing: const Icon(Icons.chevron_right),
+    onTap: () async {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Remove PIN?"),
+          content: const Text(
+            "This will disable PIN protection. You can still use biometrics if available.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text("Remove"),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true) {
+        await AppLockAndPermissionsGate.clearPin();
+
+        if (!context.mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("App PIN removed"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    },
+  ),
+),
+
+
+Card(
+  child: ListTile(
+    leading: const Icon(Icons.pin, color: _kAccentColor),
+    title: const Text("Change App PIN"),
+    subtitle: const Text("Update or reset your app lock PIN"),
+    trailing: const Icon(Icons.chevron_right),
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const SecurityAndPermissionsScreen(),
+        ),
+      );
+    },
+  ),
+),
+
+const SizedBox(height: 20),
+const Divider(),
+const SizedBox(height: 10),
+
           const Text(
             "Permissions",
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),

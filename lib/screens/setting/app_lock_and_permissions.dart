@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../security/security_screen.dart';
 
 class AppLockAndPermissionsGate extends StatefulWidget {
   final Widget child;
@@ -351,6 +352,10 @@ class _AppLockAndPermissionsGateState extends State<AppLockAndPermissionsGate>
                     child: const Text("Unlock with PIN"),
                   ),
                   const SizedBox(height: 10),
+
+                  // ✅ Change PIN button
+
+
                 ],
 
                 // ✅ Biometrics button
@@ -373,10 +378,38 @@ class _AppLockAndPermissionsGateState extends State<AppLockAndPermissionsGate>
 
                 const SizedBox(height: 12),
 
-                TextButton(
-                  onPressed: _cancel,
-                  child: const Text("Cancel"),
-                ),
+                // ✅ Show "Set PIN" button if no PIN exists
+if (!hasPin) ...[
+  ElevatedButton(
+    onPressed: () async {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const SecurityAndPermissionsScreen(),
+        ),
+      );
+
+      // Refresh PIN after coming back
+      _savedPin = await AppLockAndPermissionsGate.getSavedPin();
+      if (mounted) setState(() {});
+    },
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.grey.shade800,
+      foregroundColor: Colors.white,
+      minimumSize: const Size.fromHeight(48),
+    ),
+    child: const Text("Set App PIN"),
+  ),
+  const SizedBox(height: 12),
+],
+
+
+                if (!hasPin)
+  TextButton(
+    onPressed: _cancel,
+    child: const Text("Cancel"),
+  ),
+
               ],
             ),
           ),
