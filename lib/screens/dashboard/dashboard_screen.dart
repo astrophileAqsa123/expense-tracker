@@ -3,10 +3,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+<<<<<<< HEAD
 import 'package:provider/provider.dart';
 
 import '../../provider/currency_provider.dart';
 import '../../l10n/app_localizations.dart';
+=======
+>>>>>>> 0f10098 (Your commit message)
 
 import '../add_transaction/add_income_screen.dart';
 import '../add_transaction/add_expense_screen.dart';
@@ -15,6 +18,7 @@ import '../analytics/analytics_screen.dart';
 import '../setting/setting.dart';
 import '../budget/budget_setup_screen.dart';
 import '../transactions/transactions_screen.dart';
+<<<<<<< HEAD
 import '../budget/your_budget_screen.dart';
 import '../pdf/pdf.dart';
 import '../notification/notification_screen.dart';
@@ -28,6 +32,8 @@ const Color _kBackgroundColor = Color(0xFFFAFAFA); // Off-White
 const Color _kAccentColor = kStormyTeal;
 const Color _kDangerColor = kCoralGlow;
 const Color _kSuccessColor = kMintLeaf;
+=======
+>>>>>>> 0f10098 (Your commit message)
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -40,8 +46,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+<<<<<<< HEAD
   /// Keep internal values in English for logic/queries
   /// UI will show localized labels.
+=======
+>>>>>>> 0f10098 (Your commit message)
   String selectedPeriod = 'Month';
 
   bool isExpanded = false;
@@ -114,14 +123,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       _buildCategoriesGrid(),
                       const SizedBox(height: 20),
                       _buildRecentTransactions(userId),
+<<<<<<< HEAD
                       const SizedBox(height: 24),
                       _buildYourBudgetCard(),
                       const SizedBox(height: 24),
+=======
+                      const SizedBox(height: 160),
+>>>>>>> 0f10098 (Your commit message)
                     ],
                   ),
                 ),
               ],
             ),
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0f10098 (Your commit message)
             Positioned(
               bottom: 80,
               right: 20,
@@ -135,12 +152,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0f10098 (Your commit message)
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
               child: _buildBottomNavigationBar(),
             ),
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0f10098 (Your commit message)
             Positioned(
               bottom: 30,
               left: (MediaQuery.of(context).size.width / 2) - 30,
@@ -164,9 +189,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+<<<<<<< HEAD
   Widget _buildAppBar(String userId) {
     final t = AppLocalizations.of(context)!;
 
+=======
+  // ✅ UPDATED APP BAR: listens to Firestore user doc and updates photo instantly
+  Widget _buildAppBar(String userId) {
+>>>>>>> 0f10098 (Your commit message)
     return SliverAppBar(
       expandedHeight: 110,
       floating: false,
@@ -183,26 +213,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
             final authUser = _auth.currentUser;
 
             if (snapshot.connectionState == ConnectionState.waiting) {
+<<<<<<< HEAD
               displayName = t.loading;
+=======
+              displayName = "Loading...";
+>>>>>>> 0f10098 (Your commit message)
             }
 
             if (snapshot.hasData && snapshot.data!.exists) {
               final userData = snapshot.data!.data();
 
+<<<<<<< HEAD
               displayName =
                   (userData?['name'] as String?) ?? (authUser?.displayName ?? t.user);
 
               final String? dbPhotoUrl = userData?['imageUrl'] as String?;
+=======
+              // Name field (your app stores it as 'name')
+              displayName =
+                  (userData?['name'] as String?) ??
+                  (authUser?.displayName ?? "User");
+
+              // ✅ Use 'photoUrl' from Firestore (recommended)
+              final String? dbPhotoUrl = userData?['photoUrl'] as String?;
+
+              // optional: cache buster
+>>>>>>> 0f10098 (Your commit message)
               final photoUpdatedAt = userData?['photoUpdatedAt'];
 
               if (dbPhotoUrl != null && dbPhotoUrl.isNotEmpty) {
                 photoUrl = dbPhotoUrl;
+<<<<<<< HEAD
+=======
+
+                // If you store timestamp, add it to force refresh
+>>>>>>> 0f10098 (Your commit message)
                 if (photoUpdatedAt != null) {
                   photoUrl = "$photoUrl?v=${photoUpdatedAt.toString()}";
                 }
               } else {
+<<<<<<< HEAD
                 photoUrl = authUser?.photoURL;
               }
+=======
+                // Fallback to FirebaseAuth photoURL if Firestore missing
+                photoUrl = authUser?.photoURL;
+              }
+            } else {
+              // fallback if user doc doesn't exist yet
+              displayName = authUser?.displayName ?? "User";
+              photoUrl = authUser?.photoURL;
+>>>>>>> 0f10098 (Your commit message)
             }
 
             return Container(
@@ -221,7 +282,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       CircleAvatar(
                         radius: 25,
+<<<<<<< HEAD
                         backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
+=======
+                        backgroundImage:
+                            (photoUrl != null && photoUrl.isNotEmpty)
+>>>>>>> 0f10098 (Your commit message)
                             ? NetworkImage(photoUrl)
                             : null,
                         backgroundColor: Colors.white24,
@@ -234,9 +300,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
+<<<<<<< HEAD
                           Text(
                             t.welcomeBack,
                             style: const TextStyle(
+=======
+                          const Text(
+                            'Welcome back,',
+                            style: TextStyle(
+>>>>>>> 0f10098 (Your commit message)
                               color: Colors.white70,
                               fontSize: 12,
                             ),
@@ -253,6 +325,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ],
                   ),
+<<<<<<< HEAD
                   Row(
                     children: [
                       IconButton(
@@ -333,6 +406,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         },
                       ),
                     ],
+=======
+                  const Icon(
+                    Icons.notifications_outlined,
+                    color: Colors.white,
+                    size: 28,
+>>>>>>> 0f10098 (Your commit message)
                   ),
                 ],
               ),
@@ -790,7 +869,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         for (var doc in snapshot.data!.docs) {
           final data = doc.data() as Map<String, dynamic>;
           final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
+<<<<<<< HEAD
           final category = (data['category'] as String?) ?? 'Other';
+=======
+          final category = data['category'] ?? 'Other';
+>>>>>>> 0f10098 (Your commit message)
           categoryTotals[category] = (categoryTotals[category] ?? 0) + amount;
         }
 
@@ -806,7 +889,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final total = categoryTotals.values.fold<double>(0, (sum, a) => sum + a);
         int index = 0;
 
+<<<<<<< HEAD
         final List<PieChartSectionData> sections = [];
+=======
+>>>>>>> 0f10098 (Your commit message)
         categoryTotals.forEach((category, amount) {
           sections.add(
             PieChartSectionData(
@@ -982,6 +1068,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 );
               }
+<<<<<<< HEAD
+=======
+
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: snapshot.data!.docs.length,
+                itemBuilder: (context, index) {
+                  final doc = snapshot.data!.docs[index];
+                  final data = doc.data() as Map<String, dynamic>;
+>>>>>>> 0f10098 (Your commit message)
 
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                 return Column(
@@ -1098,9 +1195,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   ) {
     IconData icon;
     Color color;
+<<<<<<< HEAD
     final currency = context.watch<CurrencyProvider>();
 
     switch (rawCategory.toLowerCase()) {
+=======
+
+    switch (category.toLowerCase()) {
+>>>>>>> 0f10098 (Your commit message)
       case 'food':
         icon = Icons.restaurant;
         color = _kDangerColor;
@@ -1122,8 +1224,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color = const Color(0xFF718096);
     }
 
+<<<<<<< HEAD
     final amountColor = isIncome ? _kSuccessColor : _kDangerColor;
 
+=======
+>>>>>>> 0f10098 (Your commit message)
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -1261,8 +1366,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           heroTag: label,
           mini: true,
           backgroundColor: color,
+<<<<<<< HEAD
           foregroundColor: Colors.white,
           onPressed: onTap,
+=======
+          onPressed: () {
+            if (isExpanded) {
+              setState(() {
+                isExpanded = false;
+              });
+            }
+            onTap?.call();
+          },
+>>>>>>> 0f10098 (Your commit message)
           child: Icon(icon, size: 20),
         ),
       ],
@@ -1284,6 +1400,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             IconButton(
+<<<<<<< HEAD
               icon: Icon(
                 Icons.home,
                 color: currentIndex == 0 ? _kAccentColor : Colors.grey.shade600,
@@ -1320,6 +1437,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 context,
                 MaterialPageRoute(builder: (_) => const SettingsScreen()),
               ),
+=======
+              icon: const Icon(Icons.bar_chart),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AnalyticsScreen(),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(width: 48),
+            IconButton(
+              icon: const Icon(Icons.account_balance_wallet_outlined),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const BudgetSetupScreen(),
+                  ),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsScreen(),
+                  ),
+                );
+              },
+>>>>>>> 0f10098 (Your commit message)
             ),
           ],
         ),

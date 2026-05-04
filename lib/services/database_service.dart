@@ -2,7 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker/models/budget_model.dart';
 import 'package:expense_tracker/models/transaction_model.dart';
 import 'package:expense_tracker/models/user_model.dart';
+<<<<<<< HEAD
 import 'package:firebase_auth/firebase_auth.dart';
+=======
+>>>>>>> 0f10098 (Your commit message)
 
 class DatabaseService {
   final FirebaseFirestore _db;
@@ -38,6 +41,7 @@ class DatabaseService {
   // ---------------- BUDGET ----------------
 
   /// Update budget
+<<<<<<< HEAD
  Future<void> _updateBudget(String docId, Map<String, double> updatedBudget) async {
   final userId = FirebaseAuth.instance.currentUser!.uid;
   await FirebaseFirestore.instance
@@ -73,6 +77,37 @@ class DatabaseService {
         .map(_mapTxSnapshot);
   }
 
+=======
+  Future<void> updateBudget(BudgetModel budget) {
+    return userDoc.update({'budget': budget.toMap()});
+  }
+
+  // ---------------- TRANSACTIONS ----------------
+
+  /// Add transaction
+  Future<void> addTransaction(TransactionModel tx) {
+    return txCol.add(tx.toMap());
+  }
+
+  /// Update transaction
+  Future<void> editTransaction(String id, TransactionModel tx) {
+    return txCol.doc(id).update(tx.toMap());
+  }
+
+  /// Delete transaction
+  Future<void> deleteTransaction(String id) {
+    return txCol.doc(id).delete();
+  }
+
+  /// 🔥 Stream all transactions (REAL-TIME, FAST)
+  Stream<List<TransactionModel>> streamTransactions() {
+    return txCol
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map(_mapTxSnapshot);
+  }
+
+>>>>>>> 0f10098 (Your commit message)
   /// 🔥 Stream by category
   Stream<List<TransactionModel>> streamTransactionsByCategory(
       String category) {

@@ -82,6 +82,7 @@ class AuthService {
 
   // ------------------- LOGOUT -------------------
   Future<void> logout() async => await _auth.signOut();
+<<<<<<< HEAD
 // ------------------- FORGOT PASSWORD -------------------
   Future<void> sendPasswordReset(String email) async {
   try {
@@ -92,6 +93,13 @@ class AuthService {
       message: e.message ?? 'Failed to send reset email',
     );
   }
+=======
+
+  // ------------------- HELPER -------------------
+
+  /// Safe check if user is logged in
+  bool get isLoggedIn => currentUser != null;
+>>>>>>> 0f10098 (Your commit message)
 }
 
 

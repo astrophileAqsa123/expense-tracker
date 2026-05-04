@@ -20,11 +20,18 @@ const Color kInfoColor = Color(0xFF718096); // Secondary text/Label
 class TransactionDetailsScreen extends StatefulWidget {
  final String transactionId;
 
+<<<<<<< HEAD
  const TransactionDetailsScreen({super.key, required this.transactionId});
 
  @override
  State<TransactionDetailsScreen> createState() =>
    _TransactionDetailsScreenState();
+=======
+  const TransactionDetailsScreen({super.key, required this.transactionId});
+
+  @override
+  State<TransactionDetailsScreen> createState() => _TransactionDetailsScreenState();
+>>>>>>> 0f10098 (Your commit message)
 }
 
 class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
@@ -45,6 +52,7 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
   final uid = _auth.currentUser?.uid;
   if (uid == null) return;
 
+<<<<<<< HEAD
   setState(() => loading = true);
 
   try {
@@ -62,6 +70,62 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
    if (mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
      const SnackBar(content: Text("Failed to load transaction details.")),
+=======
+    setState(() => loading = true);
+
+    try {
+      final doc = await _db
+          .collection("users")
+          .doc(uid)
+          .collection("transactions")
+          .doc(widget.transactionId)
+          .get();
+
+      transactionData = doc.exists ? doc.data() : null;
+    } catch (_) {
+      transactionData = null;
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  // ---------------- DELETE ----------------
+  Future<void> _deleteTransaction() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
+    await _db
+        .collection("users")
+        .doc(uid)
+        .collection("transactions")
+        .doc(widget.transactionId)
+        .delete();
+
+    if (mounted) Navigator.pop(context, true); // Return true to refresh previous screen
+  }
+
+  void _confirmDelete() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Delete Transaction?"),
+        content: const Text("Are you sure you want to delete this entry?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteTransaction();
+            },
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+>>>>>>> 0f10098 (Your commit message)
     );
    }
   } finally {
@@ -84,11 +148,19 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
   try {
    final userDoc = _db.collection("users").doc(uid);
 
+<<<<<<< HEAD
    // 1. Remove the transaction
    await userDoc
      .collection("transactions")
      .doc(widget.transactionId)
      .delete();
+=======
+    final String title = data["title"]?.toString() ?? "Untitled";
+    final double amount = (data["amount"] is num) ? (data["amount"] as num).toDouble() : 0.0;
+    final String type = data["type"]?.toString() ?? "expense";
+    final String category = data["category"]?.toString() ?? "No category";
+    final String notes = data["notes"]?.toString() ?? "No notes";
+>>>>>>> 0f10098 (Your commit message)
 
    // 2. Reverse the balance update (Subtract income, add back expense)
    if (type == "income") {
@@ -103,10 +175,56 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
     });
    }
 
+<<<<<<< HEAD
    if (mounted) {
     Navigator.pop(context, true); // Return true to refresh previous screen
     ScaffoldMessenger.of(context).showSnackBar(
      const SnackBar(content: Text("Transaction deleted successfully!")),
+=======
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Transaction Details"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => EditTransactionScreen(
+                    transactionId: widget.transactionId,
+                  ),
+                ),
+              );
+
+              if (result == true) {
+                _loadTransaction(); // Reload after edit
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete, color: Colors.red),
+            onPressed: _confirmDelete,
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: ListView(
+          children: [
+            _buildDetailTile("Title", title),
+            _buildDetailTile("Amount", "₹ ${amount.toStringAsFixed(2)}"),
+            _buildDetailTile("Type", type == "expense" ? "Expense" : "Income"),
+            _buildDetailTile("Category", category),
+            _buildDetailTile(
+              "Date",
+              date != null ? DateFormat("yyyy-MM-dd").format(date) : "No date",
+            ),
+            _buildDetailTile("Notes", notes),
+          ],
+        ),
+      ),
+>>>>>>> 0f10098 (Your commit message)
     );
    }
   } catch (e) {
@@ -151,6 +269,7 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
    return const Scaffold(body: Center(child: CircularProgressIndicator(color: kStormyTeal)));
   }
 
+<<<<<<< HEAD
   if (transactionData == null) {
    return const Scaffold(
     body: Center(
@@ -280,6 +399,14 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
       Text(
        "$amountSign $currency ${amount.toStringAsFixed(2)}",
        style: const TextStyle(
+=======
+  // ---------------- DETAIL TILE ----------------
+  Widget _buildDetailTile(String label, String value) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+>>>>>>> 0f10098 (Your commit message)
         color: Colors.white,
         fontSize: 36,
         fontWeight: FontWeight.bold,

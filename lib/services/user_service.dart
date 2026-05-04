@@ -26,12 +26,19 @@ class UserService {
     return docSnap.data();
   }
 
+<<<<<<< HEAD
   /// ✅ Update user profile (merge) + supports extraData
+=======
+  /// Update user profile (partial update using merge)
+>>>>>>> 0f10098 (Your commit message)
   Future<void> updateUserProfile({
     String? name,
     String? bio,
     String? imageUrl,
+<<<<<<< HEAD
     Map<String, dynamic>? extraData,
+=======
+>>>>>>> 0f10098 (Your commit message)
   }) async {
     final uid = _uid;
     if (uid == null) return;
@@ -40,6 +47,7 @@ class UserService {
 
     if (name != null) dataToUpdate['name'] = name;
     if (bio != null) dataToUpdate['bio'] = bio;
+<<<<<<< HEAD
 
     if (imageUrl != null) {
       // ✅ keep old key for compatibility
@@ -56,6 +64,9 @@ class UserService {
     if (extraData != null && extraData.isNotEmpty) {
       dataToUpdate.addAll(extraData);
     }
+=======
+    if (imageUrl != null) dataToUpdate['imageUrl'] = imageUrl;
+>>>>>>> 0f10098 (Your commit message)
 
     if (dataToUpdate.isEmpty) return;
 

@@ -79,15 +79,39 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     );
   }
 
+<<<<<<< HEAD
+=======
+  Future<String> uploadImage() async {
+    final storage = FirebaseStorage.instance;
+    final ref = storage.ref("profile_photos/${DateTime.now().millisecondsSinceEpoch}.jpg");
+
+    if (kIsWeb && _webImageBytes != null) {
+      await ref.putData(_webImageBytes!);
+    } else if (_selectedImage != null) {
+      await ref.putFile(_selectedImage!);
+    } else {
+      return imageUrl; // no new image
+    }
+
+    return await ref.getDownloadURL();
+  }
+
+>>>>>>> 0f10098 (Your commit message)
   Future<void> saveProfile() async {
     setState(() => loading = true);
 
     try {
       String finalImageUrl = imageUrl;
 
+<<<<<<< HEAD
       // ✅ Upload to Cloudinary if new image selected
       if (_selectedImage != null) {
         finalImageUrl = await CloudinaryService.uploadImage(_selectedImage!);
+=======
+      // Upload new image if selected
+      if ((kIsWeb && _webImageBytes != null) || (!kIsWeb && _selectedImage != null)) {
+        finalImageUrl = await uploadImage();
+>>>>>>> 0f10098 (Your commit message)
       }
 
       await _userService.updateUserProfile(
@@ -96,14 +120,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         imageUrl: finalImageUrl,
       );
 
+<<<<<<< HEAD
       if (!mounted) return;
 
+=======
+>>>>>>> 0f10098 (Your commit message)
       setState(() {
         imageUrl = finalImageUrl;
         _selectedImage = null;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
+<<<<<<< HEAD
         const SnackBar(
           content: Text("Profile updated successfully"),
           backgroundColor: Colors.green,
@@ -118,6 +146,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           content: Text("Failed to update profile: $e"),
           backgroundColor: Colors.red,
         ),
+=======
+        const SnackBar(content: Text("Profile updated successfully"), backgroundColor: Colors.green),
+      );
+
+      Navigator.pop(context, true); // return true to indicate profile updated
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to update profile: $e"), backgroundColor: Colors.red),
+>>>>>>> 0f10098 (Your commit message)
       );
     } finally {
       if (mounted) setState(() => loading = false);
@@ -170,6 +207,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                       ),
                     ],
                   ),
+<<<<<<< HEAD
+=======
+                  const SizedBox(height: 10),
+                  const Text(
+                    "Add Profile Photo",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+>>>>>>> 0f10098 (Your commit message)
                   const SizedBox(height: 20),
                   TextField(
                     controller: nameController,

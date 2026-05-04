@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../provider/analytic_provider.dart';
 
+<<<<<<< HEAD
 import '../../provider/analytic_provider.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -116,12 +118,62 @@ class AnalyticsScreen extends StatelessWidget {
   ) {
     final t = AppLocalizations.of(context)!;
 
+=======
+class AnalyticsScreen extends StatelessWidget {
+  const AnalyticsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => AnalyticProvider(),
+      child: Consumer<AnalyticProvider>(
+        builder: (context, txProvider, _) {
+          if (txProvider.loading) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          final totalIncome = txProvider.totalIncome;
+          final totalExpense = txProvider.totalExpense;
+          final savings = totalIncome - totalExpense;
+          final categoryTotals = txProvider.categoryTotals;
+          final dailyTotals = txProvider.dailyTotals;
+
+          return Scaffold(
+            appBar: AppBar(title: const Text("Analytics")),
+            body: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _buildSummaryCards(totalIncome, totalExpense, savings),
+                const SizedBox(height: 20),
+                _buildSectionTitle("Expense by Category"),
+                _buildCategoryPieChart(categoryTotals),
+                const SizedBox(height: 30),
+                _buildSectionTitle("Daily Expense Chart"),
+                _buildDailyBarChart(dailyTotals),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSummaryCards(double income, double expense, double savings) {
+>>>>>>> 0f10098 (Your commit message)
     return Row(
       children: [
+<<<<<<< HEAD
         _summaryCard(t.income, income, _kSuccessColor, Icons.trending_up),
         _summaryCard(t.expenses, expense, _kDangerColor, Icons.trending_down),
         _summaryCard(t.netSavings, savings, _kAccentColor,
             Icons.account_balance_wallet_outlined),
+=======
+        _summaryCard("Income", income, Colors.green),
+        _summaryCard("Expense", expense, Colors.red),
+        _summaryCard("Savings", savings, Colors.blue),
+>>>>>>> 0f10098 (Your commit message)
       ],
     );
   }
@@ -133,6 +185,7 @@ class AnalyticsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
+<<<<<<< HEAD
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -141,10 +194,15 @@ class AnalyticsScreen extends StatelessWidget {
               offset: const Offset(0, 3),
             ),
           ],
+=======
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 6)],
+>>>>>>> 0f10098 (Your commit message)
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+<<<<<<< HEAD
             Icon(icon, color: color.withOpacity(0.8), size: 20),
             const SizedBox(height: 4),
             Text(
@@ -160,6 +218,12 @@ class AnalyticsScreen extends StatelessWidget {
                 fontWeight: FontWeight.w800,
               ),
             ),
+=======
+            Text(title, style: const TextStyle(fontSize: 14, color: Colors.black)),
+            const SizedBox(height: 6),
+            Text(amount.toStringAsFixed(2),
+                style: TextStyle(fontSize: 18, color: color, fontWeight: FontWeight.bold)),
+>>>>>>> 0f10098 (Your commit message)
           ],
         ),
       ),
@@ -168,6 +232,7 @@ class AnalyticsScreen extends StatelessWidget {
 
   Widget _buildSectionTitle(String title) {
     return Padding(
+<<<<<<< HEAD
       padding: const EdgeInsets.only(bottom: 12, top: 8),
       child: Text(
         title,
@@ -199,6 +264,16 @@ class AnalyticsScreen extends StatelessWidget {
 
       final label = _categoryLabel(t, entry.key);
 
+=======
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _buildCategoryPieChart(Map<String, double> data) {
+    if (data.isEmpty) return const Center(child: Text("No expense data."));
+    final sections = data.entries.map((entry) {
+>>>>>>> 0f10098 (Your commit message)
       return PieChartSectionData(
         value: entry.value,
         title: label,
@@ -218,6 +293,7 @@ class AnalyticsScreen extends StatelessWidget {
     }).toList();
 
     return Container(
+<<<<<<< HEAD
       height: 280,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -240,6 +316,37 @@ class AnalyticsScreen extends StatelessWidget {
                 centerSpaceRadius: 40,
                 sectionsSpace: 3,
                 borderData: FlBorderData(show: false),
+=======
+      height: 250,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+      child: PieChart(PieChartData(sections: sections, centerSpaceRadius: 30, sectionsSpace: 2)),
+    );
+  }
+
+  Widget _buildDailyBarChart(Map<int, double> data) {
+    if (data.isEmpty) return const Center(child: Text("No expense data."));
+    return Container(
+      height: 280,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+      child: BarChart(
+        BarChartData(
+          gridData: FlGridData(show: false),
+          borderData: FlBorderData(show: false),
+          barGroups: data.entries.map((e) {
+            return BarChartGroupData(
+              x: e.key,
+              barRods: [BarChartRodData(toY: e.value, width: 14, color: Colors.red)],
+            );
+          }).toList(),
+          titlesData: FlTitlesData(
+            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true)),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (v, meta) => Text("${v.toInt()}", style: const TextStyle(fontSize: 10)),
+>>>>>>> 0f10098 (Your commit message)
               ),
             ),
           ),

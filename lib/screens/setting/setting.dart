@@ -9,6 +9,7 @@ import '../../l10n/app_localizations.dart'; // ✅ NEW (generated)
 
 import '../budget/advanced_budget_screen.dart';
 import '../setting/profile_edit_screen.dart';
+<<<<<<< HEAD
 import '../security/security_screen.dart';
 
 
@@ -21,6 +22,8 @@ const Color kCoralGlow = Color(0xFFFB8F67);
 const Color _kAccentColor = kStormyTeal;
 const Color _kDangerColor = kCoralGlow;
 // -------------------------------
+=======
+>>>>>>> 0f10098 (Your commit message)
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -101,9 +104,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           style: const TextStyle(color: Colors.black87),
         ),
         centerTitle: true,
+<<<<<<< HEAD
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
+=======
+        backgroundColor: Colors.deepPurple,
+>>>>>>> 0f10098 (Your commit message)
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -124,6 +131,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             icon: Icons.language,
             title: t.language, // ✅ localized
             subtitle: selectedLanguage,
+<<<<<<< HEAD
             trailing: Theme(
               data: Theme.of(context).copyWith(canvasColor: Colors.white),
               child: DropdownButton<String>(
@@ -150,11 +158,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ))
                     .toList(),
               ),
+=======
+            trailing: DropdownButton<String>(
+              value: selectedLanguage,
+              onChanged: (val) => setState(() => selectedLanguage = val!),
+              items: languages
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .toList(),
+>>>>>>> 0f10098 (Your commit message)
             ),
           ),
 
           _tile(
             icon: Icons.currency_exchange,
+<<<<<<< HEAD
             title: t.currency, // ✅ localized
             subtitle: currencyProvider.label,
             trailing: Theme(
@@ -176,18 +193,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ))
                     .toList(),
               ),
+=======
+            title: "Currency",
+            subtitle: selectedCurrency,
+            trailing: DropdownButton<String>(
+              value: selectedCurrency,
+              onChanged: (val) => setState(() => selectedCurrency = val!),
+              items: currencies
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .toList(),
+>>>>>>> 0f10098 (Your commit message)
             ),
           ),
 
           _header(t.appearance), // ✅ localized
 
           SwitchListTile(
+<<<<<<< HEAD
             secondary: const Icon(Icons.dark_mode, color: _kAccentColor),
             title: Text(
               t.darkMode, // ✅ localized
               style: const TextStyle(color: Colors.black87),
             ),
             activeColor: _kAccentColor,
+=======
+            secondary: const Icon(Icons.dark_mode, color: Colors.deepPurple),
+            title: const Text("Dark Mode"),
+>>>>>>> 0f10098 (Your commit message)
             value: themeProvider.themeMode == ThemeMode.dark,
             onChanged: (val) => themeProvider.toggleTheme(val),
           ),
@@ -210,6 +242,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: t.privacySecurity, // ✅ localized
             subtitle: t.privacySecuritySubtitle, // ✅ localized
             icon: Icons.lock_outline,
+<<<<<<< HEAD
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -221,6 +254,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             ),
+=======
+            onTap: () {}, // Implement security settings later
+>>>>>>> 0f10098 (Your commit message)
           ),
 
           _header(t.about), // ✅ localized
@@ -228,7 +264,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _tile(
             title: t.aboutApp, // ✅ localized
             icon: Icons.info_outline,
+<<<<<<< HEAD
             onTap: () {},
+=======
+            onTap: () {}, // Could navigate to About page
+>>>>>>> 0f10098 (Your commit message)
           ),
 
           const SizedBox(height: 20),
@@ -266,6 +306,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ------------------- Helper Widgets -------------------
   Widget _header(String text) => Padding(
+<<<<<<< HEAD
         padding: const EdgeInsets.only(top: 18, bottom: 8, left: 20),
         child: Text(
           text,
@@ -274,6 +315,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             fontWeight: FontWeight.bold,
             letterSpacing: 1.0,
             fontSize: 12,
+=======
+        padding: const EdgeInsets.all(12),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.grey,
+            fontWeight: FontWeight.bold,
+>>>>>>> 0f10098 (Your commit message)
           ),
         ),
       );

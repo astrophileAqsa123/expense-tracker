@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+<<<<<<< HEAD
 import '../../l10n/app_localizations.dart';
 
 // --- THEME COLOR DEFINITIONS (Stormy Teal Theme) ---
@@ -9,6 +10,14 @@ const Color kStormyTeal = Color(0xFF156064);
 const Color kMintLeaf = Color(0xFF00C49A);
 const Color kBackgroundColor = Color(0xFFF5F7FA);
 const Color kTextColor = Color(0xFF2D3748);
+=======
+// --- Theme Colors ---
+const Color kPrimaryColor = Color(0xFF6C63FF);
+const Color kPrimaryDarkColor = Color(0xFF5A52D5);
+const Color kBackgroundColor = Color(0xFFF5F7FA);
+const Color kTextColor = Color(0xFF2D3748);
+const Color kSuccessColor = Color(0xFF4CAF50);
+>>>>>>> 0f10098 (Your commit message)
 const Color kErrorColor = Color(0xFFF44336);
 
 const Color _kIncomePrimary = kMintLeaf;
@@ -76,12 +85,19 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
+<<<<<<< HEAD
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(t.userNotLoggedIn)),
         );
         setState(() => loading = false);
       }
+=======
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("User not logged in")),
+      );
+      setState(() => loading = false);
+>>>>>>> 0f10098 (Your commit message)
       return;
     }
 
@@ -91,11 +107,17 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
     try {
       final userDoc = FirebaseFirestore.instance.collection("users").doc(uid);
 
+<<<<<<< HEAD
       // Ensure user/balance exists
       final snap = await userDoc.get();
       final data = snap.data() as Map<String, dynamic>?;
 
       if (!snap.exists || data == null || !data.containsKey('balance')) {
+=======
+      // Ensure balance exists
+      final snap = await userDoc.get();
+      if (!snap.exists || !(snap.data() as Map<String, dynamic>).containsKey('balance')) {
+>>>>>>> 0f10098 (Your commit message)
         await userDoc.set({
           "balance": {
             "totalBalance": 0.0,
@@ -105,7 +127,19 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
         }, SetOptions(merge: true));
       }
 
+<<<<<<< HEAD
       // Save income into "transactions"
+=======
+      // Save income
+      await userDoc.collection("incomes").add({
+        "amount": amount,
+        "category": selectedCategory,
+        "description": descriptionCtrl.text.trim(),
+        "date": DateTime.now(),
+      });
+
+      // Save transaction
+>>>>>>> 0f10098 (Your commit message)
       await userDoc.collection("transactions").add({
         "amount": amount,
         "type": "income",
@@ -127,13 +161,21 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
             backgroundColor: _kIncomePrimary,
           ),
         );
+<<<<<<< HEAD
         Navigator.pop(context, true);
+=======
+        Navigator.pop(context, true); // Refresh dashboard
+>>>>>>> 0f10098 (Your commit message)
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+<<<<<<< HEAD
             content: Text('${t.failedToAddIncome}: $e'),
+=======
+            content: Text("Failed to add income: $e"),
+>>>>>>> 0f10098 (Your commit message)
             backgroundColor: kErrorColor,
           ),
         );
@@ -150,6 +192,7 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
     return Scaffold(
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
+<<<<<<< HEAD
         title: Text(
           t.addIncome,
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -157,6 +200,24 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
         backgroundColor: _kIncomePrimary,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
+=======
+        title: const Text(
+          "Add Income",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: kPrimaryColor,
+        iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [kPrimaryColor, kPrimaryDarkColor],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+>>>>>>> 0f10098 (Your commit message)
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: _kIncomePrimary))
@@ -168,7 +229,11 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                   children: [
                     _buildTextField(
                       controller: amountCtrl,
+<<<<<<< HEAD
                       label: t.amount,
+=======
+                      label: "Amount",
+>>>>>>> 0f10098 (Your commit message)
                       icon: Icons.attach_money,
                       keyboard: TextInputType.number,
                       validator: (v) {
@@ -182,6 +247,7 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                     DropdownButtonFormField<String>(
                       value: selectedCategory,
                       items: categories
+<<<<<<< HEAD
                           .map(
                             (raw) => DropdownMenuItem(
                               value: raw,
@@ -191,6 +257,12 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                               ),
                             ),
                           )
+=======
+                          .map((cat) => DropdownMenuItem(
+                                value: cat,
+                                child: Text(cat, style: const TextStyle(color: kTextColor)),
+                              ))
+>>>>>>> 0f10098 (Your commit message)
                           .toList(),
                       onChanged: (v) => setState(() => selectedCategory = v!),
                       decoration: _inputDecoration.copyWith(
@@ -202,19 +274,28 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                     const SizedBox(height: 15),
                     _buildTextField(
                       controller: descriptionCtrl,
+<<<<<<< HEAD
                       label: t.descriptionOptional,
+=======
+                      label: "Description (optional)",
+>>>>>>> 0f10098 (Your commit message)
                       icon: Icons.description,
                     ),
                     const SizedBox(height: 30),
                     ElevatedButton(
                       onPressed: loading ? null : _addIncome,
                       style: ElevatedButton.styleFrom(
+<<<<<<< HEAD
                         backgroundColor: _kIncomePrimary,
                         disabledBackgroundColor: _kIncomePrimary.withOpacity(0.5),
+=======
+                        backgroundColor: kSuccessColor,
+>>>>>>> 0f10098 (Your commit message)
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 16),
+<<<<<<< HEAD
                         elevation: 2,
                       ),
                       child: loading
@@ -231,6 +312,18 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                                 color: Colors.white,
                               ),
                             ),
+=======
+                        elevation: 5,
+                      ),
+                      child: const Text(
+                        "Add Income",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+>>>>>>> 0f10098 (Your commit message)
                     ),
                   ],
                 ),
@@ -239,11 +332,16 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
     );
   }
 
+<<<<<<< HEAD
   // THEMED INPUT DECORATION
   final InputDecoration _inputDecoration = const InputDecoration(
     border: OutlineInputBorder(
       borderRadius: BorderRadius.all(Radius.circular(12)),
     ),
+=======
+  final InputDecoration _inputDecoration = const InputDecoration(
+    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+>>>>>>> 0f10098 (Your commit message)
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.all(Radius.circular(12)),
       borderSide: BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
@@ -274,7 +372,11 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
         labelText: label,
         prefixIcon: Padding(
           padding: const EdgeInsets.only(left: 10.0, right: 8.0),
+<<<<<<< HEAD
           child: Icon(icon, color: _kIncomePrimary, size: 24),
+=======
+          child: Icon(icon, color: kPrimaryColor, size: 24),
+>>>>>>> 0f10098 (Your commit message)
         ),
         prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
       ),
