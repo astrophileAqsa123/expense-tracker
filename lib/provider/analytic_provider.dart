@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 import 'dart:async';
+=======
+>>>>>>> 0f10098 (Your commit message)
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,6 +13,7 @@ class AnalyticProvider with ChangeNotifier {
 
   List<TransactionModel> _transactions = [];
   bool loading = true;
+<<<<<<< HEAD
   String? errorMessage;
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _sub;
@@ -17,10 +21,16 @@ class AnalyticProvider with ChangeNotifier {
 
   AnalyticProvider() {
     _listenAuthAndLoad();
+=======
+
+  AnalyticProvider() {
+    _init();
+>>>>>>> 0f10098 (Your commit message)
   }
 
   List<TransactionModel> get transactions => _transactions;
 
+<<<<<<< HEAD
   double get totalIncome => _transactions
       .where((tx) => tx.type == 'income')
       .fold(0.0, (sum, tx) => sum + tx.amount);
@@ -34,6 +44,19 @@ class AnalyticProvider with ChangeNotifier {
     for (final tx in _transactions) {
       if (tx.type == 'expense') {
         map[tx.category] = (map[tx.category] ?? 0.0) + tx.amount;
+=======
+  double get totalIncome =>
+      _transactions.where((tx) => tx.type == 'income').fold(0, (sum, tx) => sum + tx.amount);
+
+  double get totalExpense =>
+      _transactions.where((tx) => tx.type == 'expense').fold(0, (sum, tx) => sum + tx.amount);
+
+  Map<String, double> get categoryTotals {
+    final Map<String, double> map = {};
+    for (var tx in _transactions) {
+      if (tx.type == 'expense') {
+        map[tx.category] = (map[tx.category] ?? 0) + tx.amount;
+>>>>>>> 0f10098 (Your commit message)
       }
     }
     return map;
@@ -42,14 +65,23 @@ class AnalyticProvider with ChangeNotifier {
   Map<int, double> get dailyTotals {
     final Map<int, double> map = {};
     final now = DateTime.now();
+<<<<<<< HEAD
     for (final tx in _transactions) {
       if (tx.type == 'expense' && tx.date.month == now.month && tx.date.year == now.year) {
         map[tx.date.day] = (map[tx.date.day] ?? 0.0) + tx.amount;
+=======
+    for (var tx in _transactions) {
+      if (tx.type == 'expense' &&
+          tx.date.month == now.month &&
+          tx.date.year == now.year) {
+        map[tx.date.day] = (map[tx.date.day] ?? 0) + tx.amount;
+>>>>>>> 0f10098 (Your commit message)
       }
     }
     return map;
   }
 
+<<<<<<< HEAD
   void _listenAuthAndLoad() {
     _authSub = _auth.authStateChanges().listen((user) {
       if (user == null) {
@@ -132,5 +164,28 @@ class AnalyticProvider with ChangeNotifier {
     _sub?.cancel();
     _authSub?.cancel();
     super.dispose();
+=======
+  Future<void> _init() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final uid = user.uid;
+
+    _db
+        .collection('users')
+        .doc(uid)
+        .collection('transactions')
+        .orderBy('date', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+      _transactions = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return TransactionModel.fromMap(doc.id, data);
+      }).toList();
+
+      loading = false;
+      notifyListeners();
+    });
+>>>>>>> 0f10098 (Your commit message)
   }
 }

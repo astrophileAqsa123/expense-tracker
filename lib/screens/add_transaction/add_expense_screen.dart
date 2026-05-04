@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+<<<<<<< HEAD
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -16,6 +17,15 @@ const Color kErrorColor = Color(0xFFF44336);
 const Color _kExpenseAccent = kCoralGlow;
 const Color _kFocusColor = kStormyTeal;
 // -------------------------------
+=======
+import '../../provider/transaction_provider.dart';
+
+// Theme colors
+const Color kExpenseColor = Color(0xFFE53935);
+const Color kBackgroundColor = Color(0xFFF5F7FA);
+const Color kTextColor = Color(0xFF2D3748);
+const Color kErrorColor = Color(0xFFF44336);
+>>>>>>> 0f10098 (Your commit message)
 
 class AddExpenseScreen extends StatefulWidget {
   const AddExpenseScreen({super.key});
@@ -49,6 +59,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     "Other",
   ];
 
+<<<<<<< HEAD
   @override
   void dispose() {
     titleCtrl.dispose();
@@ -135,6 +146,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Future<void> _submitExpense() async {
     final t = AppLocalizations.of(context)!;
 
+=======
+  Future<void> _submitExpense() async {
+>>>>>>> 0f10098 (Your commit message)
     if (!_formKey.currentState!.validate()) return;
 
     final expenseAmount = double.parse(amountCtrl.text.trim());
@@ -142,6 +156,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     setState(() => loading = true);
 
     try {
+<<<<<<< HEAD
       // ✅ check balance before adding expense
       final currentBalance = await _getTotalBalance();
 
@@ -160,6 +175,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         category: selectedCategory, // RAW key saved
         notes: notesCtrl.text.trim(),
       );
+=======
+      await context.read<TransactionProvider>().addExpense(
+            title: titleCtrl.text.trim(),
+            amount: double.parse(amountCtrl.text.trim()),
+            category: selectedCategory,
+            notes: notesCtrl.text.trim(),
+          );
+>>>>>>> 0f10098 (Your commit message)
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -168,13 +191,21 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             backgroundColor: _kExpenseAccent,
           ),
         );
+<<<<<<< HEAD
         Navigator.pop(context, true);
+=======
+        Navigator.pop(context, true); // Return true to refresh previous screen
+>>>>>>> 0f10098 (Your commit message)
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+<<<<<<< HEAD
             content: Text('${t.failedToAddExpense}: $e'),
+=======
+            content: Text("Failed to add expense: $e"),
+>>>>>>> 0f10098 (Your commit message)
             backgroundColor: kErrorColor,
           ),
         );
@@ -191,8 +222,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     return Scaffold(
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
+<<<<<<< HEAD
         title: Text(t.addExpense, style: const TextStyle(color: Colors.white)),
         backgroundColor: _kExpenseAccent,
+=======
+        title: const Text("Add Expense", style: TextStyle(color: Colors.white)),
+        backgroundColor: kExpenseColor,
+>>>>>>> 0f10098 (Your commit message)
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
       ),
@@ -206,6 +242,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 key: _formKey,
                 child: ListView(
                   children: [
+<<<<<<< HEAD
                     _field(
                       titleCtrl,
                       t.title,
@@ -254,10 +291,36 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       Icons.notes,
                       maxLines: 3,
                     ),
+=======
+                    _field(titleCtrl, "Title", Icons.title,
+                        validator: (v) => v == null || v.isEmpty ? "Enter title" : null),
+                    const SizedBox(height: 15),
+                    _field(amountCtrl, "Amount", Icons.money_off,
+                        keyboard: TextInputType.number,
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return "Enter amount";
+                          if (double.tryParse(v) == null) return "Invalid number";
+                          return null;
+                        }),
+                    const SizedBox(height: 15),
+                    DropdownButtonFormField<String>(
+                      value: selectedCategory,
+                      items: categories
+                          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                          .toList(),
+                      onChanged: (v) => setState(() => selectedCategory = v!),
+                      decoration: _decoration("Category", Icons.category),
+                    ),
+                    const SizedBox(height: 15),
+                    _field(notesCtrl, "Notes (optional)", Icons.notes, maxLines: 3),
+>>>>>>> 0f10098 (Your commit message)
                     const SizedBox(height: 30),
-
                     ElevatedButton(
+<<<<<<< HEAD
                       onPressed: loading ? null : _submitExpense,
+=======
+                      onPressed: _submitExpense,
+>>>>>>> 0f10098 (Your commit message)
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _kExpenseAccent,
                         disabledBackgroundColor: _kExpenseAccent.withOpacity(0.5),
@@ -266,6 +329,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
+<<<<<<< HEAD
                       child: loading
                           ? const SizedBox(
                               width: 20,
@@ -283,6 +347,16 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                 color: Colors.white,
                               ),
                             ),
+=======
+                      child: const Text(
+                        "Add Expense",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+>>>>>>> 0f10098 (Your commit message)
                     ),
                   ],
                 ),
@@ -294,6 +368,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   InputDecoration _decoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
+<<<<<<< HEAD
       labelStyle: const TextStyle(color: kTextColor),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -308,6 +383,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         borderSide: const BorderSide(color: _kFocusColor, width: 2),
       ),
       prefixIcon: Icon(icon, color: _kExpenseAccent),
+=======
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      prefixIcon: Icon(icon, color: kExpenseColor),
+>>>>>>> 0f10098 (Your commit message)
       filled: true,
       fillColor: Colors.white,
     );

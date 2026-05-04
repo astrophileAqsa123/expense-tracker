@@ -104,6 +104,10 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => loading = true);
 
     try {
+<<<<<<< HEAD
+=======
+      // 🔹 Use Provider instead of creating AuthService
+>>>>>>> 0f10098 (Your commit message)
       final auth = context.read<AuthService>();
       final user = await auth.login(
         email: emailCtrl.text.trim(),
@@ -112,9 +116,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (user != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
+<<<<<<< HEAD
           SnackBar(
             content: const Text("Login successful"),
             backgroundColor: _kSuccessColor,
+=======
+          const SnackBar(
+            content: Text("Login successful"),
+            backgroundColor: Colors.green,
+>>>>>>> 0f10098 (Your commit message)
           ),
         );
 
@@ -246,7 +256,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscureText ? Icons.visibility_off : Icons.visibility,
+<<<<<<< HEAD
                       color: _kAccentColor.withOpacity(0.6),
+=======
+>>>>>>> 0f10098 (Your commit message)
                     ),
                     onPressed: () => setState(() => _obscureText = !_obscureText),
                   ),
@@ -271,6 +284,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ElevatedButton(
                   onPressed: loading ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
+<<<<<<< HEAD
                     backgroundColor: _kAccentColor, // Use #156064
                     foregroundColor: Colors.white, // White text on dark button
                     minimumSize: const Size.fromHeight(55),
@@ -285,6 +299,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           "Login",
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
+=======
+                    minimumSize: const Size.fromHeight(50),
+                  ),
+                  child: loading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text("Login", style: TextStyle(fontSize: 16)),
+>>>>>>> 0f10098 (Your commit message)
                 ),
                 const SizedBox(height: 10),
 

@@ -150,9 +150,14 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
+<<<<<<< HEAD
               content: Text(
                 "Expense of ${amount.toStringAsFixed(2)} added successfully!",
               ),
+=======
+              content:
+                  Text("Expense of ₹${amount.toStringAsFixed(2)} added!"),
+>>>>>>> 0f10098 (Your commit message)
               backgroundColor: kSuccessColor,
             ),
           );
@@ -184,6 +189,7 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
     }
   }
 
+<<<<<<< HEAD
   // ----------------- EXTRACTION LOGIC (IMPROVED) -----------------
 
   /// Extracts the most likely total amount using keyword search and heuristics.
@@ -207,17 +213,53 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
     );
 
     // 1. Priority: Find matches near "total" keywords
+=======
+  // -------------------------
+  // Extract total amount with comma and decimal handling
+  // -------------------------
+  double? _extractTotalAmount(String text) {
+    if (text.trim().isEmpty) return null;
+
+    final lines = text.split(RegExp(r'\r?\n'));
+    final numberRegex =
+        RegExp(r'\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?');
+
+    List<double> parsedNumbers = [];
+
+    for (final match in numberRegex.allMatches(text)) {
+      String raw = match.group(0)!;
+      raw = raw.replaceAll(',', ''); // remove thousand separators
+      final value = double.tryParse(raw);
+      if (value != null) parsedNumbers.add(value);
+    }
+
+    if (parsedNumbers.isEmpty) return null;
+
+    // Keyword search for lines containing total
+    final keywordRegex = RegExp(
+      r'\b(total|amount due|amount|grand total|balance due|payable|total payable|net total)\b',
+      caseSensitive: false,
+    );
+
+>>>>>>> 0f10098 (Your commit message)
     for (final line in lines.reversed) {
       if (keywordRegex.hasMatch(line)) {
         final matches = numberRegex.allMatches(line);
         if (matches.isNotEmpty) {
+<<<<<<< HEAD
           // Get the last number in the line
           final rawNumber = matches.last.group(0)!;
           return _parseAmountString(rawNumber);
+=======
+          final last = matches.last.group(0)!.replaceAll(',', '');
+          final val = double.tryParse(last);
+          if (val != null) return val;
+>>>>>>> 0f10098 (Your commit message)
         }
       }
     }
 
+<<<<<<< HEAD
     // 2. Fallback: Find the largest reasonable number (e.g., greater than 10)
     List<double> candidates = [];
     for (final match in numberRegex.allMatches(cleanedText)) {
@@ -261,11 +303,20 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
   }
 
   /// Extracts the date from text (improved heuristic).
+=======
+    // Fallback: largest number
+    parsedNumbers.sort();
+    return parsedNumbers.last;
+  }
+
+  // Extract date from text (simple heuristic)
+>>>>>>> 0f10098 (Your commit message)
   DateTime? _extractDate(String text) {
     // Regex for common date formats: YYYY-MM-DD, DD/MM/YY, etc.
     final dateRegex = RegExp(r'(\d{1,4}[-/.\s]\d{1,2}[-/.\s]\d{2,4})');
     final match = dateRegex.firstMatch(text);
     if (match == null) return null;
+<<<<<<< HEAD
 
     String dateStr = match.group(1)!.trim();
 
@@ -286,6 +337,18 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
       } catch (_) {
         // Try the next format
       }
+=======
+    String dateStr = match.group(1)!.replaceAll('/', '-').replaceAll('.', '-');
+    final parts = dateStr.split('-');
+    if (parts.length == 3 && parts[2].length == 2) {
+      parts[2] = '20' + parts[2];
+      dateStr = parts.join('-');
+    }
+    try {
+      return DateTime.parse(dateStr);
+    } catch (_) {
+      return null;
+>>>>>>> 0f10098 (Your commit message)
     }
 
     return null;
@@ -299,11 +362,15 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
     final uid = user.uid;
     final userDoc = FirebaseFirestore.instance.collection('users').doc(uid);
 
+<<<<<<< HEAD
     final batch = FirebaseFirestore.instance.batch();
 
     // 1. Add the transaction document
     final transactionRef = userDoc.collection('transactions').doc();
     batch.set(transactionRef, {
+=======
+    await userDoc.collection('transactions').add({
+>>>>>>> 0f10098 (Your commit message)
       'type': 'expense',
       'amount': amount,
       'category': 'Receipt Scan',
@@ -313,8 +380,12 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
       'createdAt': FieldValue.serverTimestamp(),
     });
 
+<<<<<<< HEAD
     // 2. Update the user balance (atomic update)
     batch.update(userDoc, {
+=======
+    await userDoc.update({
+>>>>>>> 0f10098 (Your commit message)
       'balance.totalBalance': FieldValue.increment(-amount),
       'balance.monthlyExpense': FieldValue.increment(amount),
     });
@@ -386,6 +457,7 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
                 border: Border.all(color: kBorderColor),
               ),
               child: _image == null
+<<<<<<< HEAD
                   ? Center(
                       child: Icon(
                         Icons.receipt_long,
@@ -393,12 +465,17 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
                         color: kPrimaryColor.withOpacity(0.4),
                       ),
                     )
+=======
+                  ? Icon(Icons.receipt_long,
+                      size: 100, color: kPrimaryColor.withOpacity(0.4))
+>>>>>>> 0f10098 (Your commit message)
                   : ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Image.file(_image!, fit: BoxFit.cover, width: double.infinity),
                     ),
             ),
             const SizedBox(height: 20),
+<<<<<<< HEAD
 
             // Buttons
             Row(
@@ -408,14 +485,32 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
                     onPressed: _loading ? null : () => _pickImage(ImageSource.camera),
                     icon: Icons.camera_alt,
                     label: 'Camera',
+=======
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _loading ? null : () => _pickImage(ImageSource.camera),
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Camera'),
+                    style: ElevatedButton.styleFrom(backgroundColor: kExpenseColor),
+>>>>>>> 0f10098 (Your commit message)
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
+<<<<<<< HEAD
                   child: _buildThemedButton(
                     onPressed: _loading ? null : () => _pickImage(ImageSource.gallery),
                     icon: Icons.photo_library,
                     label: 'Gallery',
+=======
+                  child: ElevatedButton.icon(
+                    onPressed: _loading ? null : () => _pickImage(ImageSource.gallery),
+                    icon: const Icon(Icons.photo_library),
+                    label: const Text('Gallery'),
+                    style: ElevatedButton.styleFrom(backgroundColor: kExpenseColor),
+>>>>>>> 0f10098 (Your commit message)
                   ),
                 ),
               ],
@@ -430,10 +525,15 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
 
             const Align(
               alignment: Alignment.centerLeft,
+<<<<<<< HEAD
               child: Text(
                 'Full Extracted Text:',
                 style: TextStyle(fontWeight: FontWeight.bold, color: kTextColor),
               ),
+=======
+              child: Text('Extracted Text:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+>>>>>>> 0f10098 (Your commit message)
             ),
             const SizedBox(height: 8),
 
@@ -442,9 +542,14 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
+<<<<<<< HEAD
                   color: kCardColor,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: kBorderColor),
+=======
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+>>>>>>> 0f10098 (Your commit message)
                 ),
                 child: SingleChildScrollView(
                   child: Text(

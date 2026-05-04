@@ -1,7 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+<<<<<<< HEAD
 import 'package:firebase_auth/firebase_auth.dart';
 
+=======
+import 'dart:async';
+
+/// Define app-specific gradient colors
+>>>>>>> 0f10098 (Your commit message)
 class AppColors {
   static const Color primaryTeal = Color(0xFF00C896);
   static const Color primaryBlue = Color(0xFF0077B6);
@@ -10,7 +16,14 @@ class AppColors {
   static const Color midBackground = Color(0xFFE5E5E5);
 }
 
+/// SplashScreen displays app branding and navigates after a delay
 class SplashScreen extends StatefulWidget {
+<<<<<<< HEAD
+=======
+  /// Route to navigate to after the splash
+  static const String nextRoute = "/login";
+
+>>>>>>> 0f10098 (Your commit message)
   const SplashScreen({super.key});
 
   @override
@@ -21,6 +34,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+<<<<<<< HEAD
     _goNext();
   }
 
@@ -36,6 +50,17 @@ class _SplashScreenState extends State<SplashScreen> {
       } else {
    
         Navigator.pushReplacementNamed(context, "/login");
+=======
+    _navigateAfterDelay();
+  }
+
+  /// Starts a timer to navigate to the next screen
+  void _navigateAfterDelay() {
+    // Simulate initialization/loading if needed
+    Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed(SplashScreen.nextRoute);
+>>>>>>> 0f10098 (Your commit message)
       }
     });
   }
@@ -43,6 +68,10 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+<<<<<<< HEAD
+=======
+      // Gradient background
+>>>>>>> 0f10098 (Your commit message)
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -55,6 +84,10 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+<<<<<<< HEAD
+=======
+              // App Icon with gradient and shadow
+>>>>>>> 0f10098 (Your commit message)
               Container(
                 width: 120,
                 height: 120,
@@ -69,7 +102,11 @@ class _SplashScreenState extends State<SplashScreen> {
                     BoxShadow(
                       color: AppColors.primaryBlue.withOpacity(0.3),
                       blurRadius: 20,
+<<<<<<< HEAD
                       offset: const Offset(0, 10),
+=======
+                      offset: Offset(0, 10),
+>>>>>>> 0f10098 (Your commit message)
                     ),
                   ],
                 ),
@@ -79,7 +116,14 @@ class _SplashScreenState extends State<SplashScreen> {
                   size: 72,
                 ),
               ),
+<<<<<<< HEAD
               const SizedBox(height: 32),
+=======
+
+              const SizedBox(height: 32),
+
+              // App Name
+>>>>>>> 0f10098 (Your commit message)
               const Text(
                 'Expense Tracker',
                 style: TextStyle(
@@ -90,6 +134,11 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
               ),
               const SizedBox(height: 8),
+<<<<<<< HEAD
+=======
+
+              // Tagline
+>>>>>>> 0f10098 (Your commit message)
               const Text(
                 'Smart Money. Simple Tracking.',
                 style: TextStyle(
@@ -99,7 +148,13 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
               ),
               const SizedBox(height: 80),
+<<<<<<< HEAD
               const CircularProgressIndicator(
+=======
+
+              // Loading indicator
+              CircularProgressIndicator(
+>>>>>>> 0f10098 (Your commit message)
                 valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
                 strokeWidth: 3,
               ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+<<<<<<< HEAD
 
 // --- COLOR PALETTE DEFINITION ---
 const Color kStormyTeal = Color(0xFF156064); 
@@ -12,6 +13,8 @@ const Color _kBackgroundColor = Color(0xFFFAFAFA);
 const Color _kAccentColor = kStormyTeal; 
 const Color _kSuccessColor = kMintLeaf;
 // --------------------------------
+=======
+>>>>>>> 0f10098 (Your commit message)
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -263,6 +266,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 ElevatedButton(
                   onPressed: loading ? null : _handleSignup,
                   style: ElevatedButton.styleFrom(
+<<<<<<< HEAD
                     backgroundColor: _kAccentColor, // Use #156064
                     foregroundColor: Colors.white, // White text on dark button
                     minimumSize: const Size.fromHeight(55),
@@ -277,6 +281,13 @@ class _SignupScreenState extends State<SignupScreen> {
                           "Create Account",
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
+=======
+                    minimumSize: const Size.fromHeight(50),
+                  ),
+                  child: loading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text("Create Account", style: TextStyle(fontSize: 16)),
+>>>>>>> 0f10098 (Your commit message)
                 ),
                 const SizedBox(height: 10),
 
